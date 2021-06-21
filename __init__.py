@@ -1,21 +1,12 @@
-import json
 import locale
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import urllib3
 from dash.dependencies import Input, Output, State
-import plotly.graph_objs as go
 import plotly.express as px
-import dash_bootstrap_components as dbc
 
-from backend import *
 from layout_objects import *
 import webbrowser
-import numpy as np
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
 

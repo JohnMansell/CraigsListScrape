@@ -1,4 +1,3 @@
-import dash_bootstrap_components as dbc
 import requests
 from bs4 import BeautifulSoup
 import webbrowser
@@ -8,8 +7,6 @@ import urllib.request
 import os
 import plotly.graph_objs as go
 from scipy.optimize import curve_fit
-import plotly.express as px
-import matplotlib.pyplot as plt
 import re
 
 import numpy as np
