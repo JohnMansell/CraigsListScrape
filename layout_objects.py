@@ -15,7 +15,8 @@ make_options = get_make_options()
 
 colors = {
     'background': '#111111',
-    'text': '#7FDBFF'
+    'text': '#7FDBFF',
+    'price': '#5dad5c'
 }
 
 # --- Header
@@ -26,9 +27,10 @@ state_dropdown = dcc.Dropdown(id='slct_state',
                               options=states,
                               placeholder='STATE',
                               multi=False,
-                              value='CA',
-                              style={'width': '100%'}
+                              style={'width': '100%',
+                                     'color': '#6c698a'}
                               )
+
 
 # --- City
 city_dropdown = dcc.Dropdown(id='slct_city',
@@ -36,12 +38,16 @@ city_dropdown = dcc.Dropdown(id='slct_city',
                              placeholder='CITY',
                              multi=False,
                              style={'width': '100%',
-                                    'margin-bottom': '30px'})
+                                    'margin-bottom': '30px',
+                                    'color': '#6c698a'})
 
 # --- Make
 make_dropdown = dcc.Dropdown(id='make_dropdown',
                              placeholder='MAKE',
-                             options=make_options)
+                             options=make_options,
+                             style={'width': '100%',
+                                    'color': '#6c698a'}
+                             )
 
 # --- Model
 model_dropdown = dcc.RadioItems(id='model_ratio_items',
@@ -51,22 +57,26 @@ model_dropdown = dcc.RadioItems(id='model_ratio_items',
 # --- Details Card
 details_card = dbc.Card(
     [
-        dbc.CardImg(src="", top=True, id='card_img'),
+        dbc.CardImg(src="",
+                    top=True,
+                    id='card_img'),
         dbc.CardBody(
             [
                 html.H4("Card Title", id='card_title'),
+                html.H5("Price", id='card_price', style={'color': colors['price']}),
                 html.P("Card text", id='card_text', style={'whiteSpace': 'pre-wrap'}),
-                dbc.Button("Go somewhere", color='primary')
+                html.Div(children=[], hidden=True, id='hidden_div')
             ])
     ], id='card',
     style={'width': '18rem'}
 
 )
 
-find_cars_button = dbc.Button('Find Cars',
+find_cars_button = dbc.Row(dbc.Button('Find Cars',
                               color='primary',
                               id='button_find_cars',
                               disabled=True,
                               outline=True,
                               size='lg',
-                              )
+                              ),
+                           justify='center')

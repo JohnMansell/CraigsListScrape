@@ -1,3 +1,4 @@
+import dash_bootstrap_components as dbc
 import requests
 from bs4 import BeautifulSoup
 import webbrowser
@@ -6,7 +7,9 @@ import pickle
 import urllib.request
 import os
 import plotly.graph_objs as go
+from scipy.optimize import curve_fit
 import plotly.express as px
+import matplotlib.pyplot as plt
 import re
 
 import numpy as np
@@ -105,9 +108,7 @@ def get_locations():
 def get_states():
 
     states = df_locations['state'].unique().tolist()
-    states_list = []
-    for state in sorted(states):
-        states_list.append({'label': state, 'value': state})
+    states_list = [{'value': state, 'label': state} for state in sorted(states)]
 
     return states_list
 
@@ -139,8 +140,8 @@ def build_url(state, city, make, model, owner_type):
 def download_image(url):
     name = str(url.split('/')[-1])
 
-    if not os.path.exists(f'./pictures/{name}'):
-        urllib.request.urlretrieve(url, f'./pictures/{name}')
+    if not os.path.exists(f'assets/{name}'):
+        urllib.request.urlretrieve(url, f'assets/{name}')
         print(url)
 
     return name
@@ -245,23 +246,41 @@ def get_make_options():
     global df_make
     make_unique = df_make.make.unique()
 
-    make_options = [{'label': make, 'value': make} for make in make_unique]
+    make_options = [{'label': make, 'value': make} for make in sorted(make_unique)]
     return make_options
 
 
 def solve_curves(fig, df_cars):
 
-    X = df_cars.miles
-    Y = df_cars.price
+    def func(x, a, b, c):
+        return a * np.exp(-b * x) + c
 
-    # --- Curve Fit
-    polynomial_coefficients = np.polyfit(X, Y, 3)
-    x_line = np.linspace(0, max(X), 100)
-    y_fx   = np.poly1d(polynomial_coefficients)
+    owners = {'owner': 'blue', 'dealer': 'red'}
 
-    y = [y_fx(x) for x in x_line]
+    for owner_type in owners:
 
-    fig.add_trace(go.Scatter(x=x_line, y=y_fx(x_line), mode='lines', hoverinfo='skip'))
+        df = df_cars[(df_cars['owner_type'] == owner_type) &
+                     (df_cars['price'] > 500)]
+
+        X = np.array(df['miles'].tolist())
+        Y = np.array(df['price'].tolist())
+
+        if len(Y) < 2:
+            continue
+
+        try:
+            popt, pcov = curve_fit(func, X, Y, [2000, 0, 4000])
+
+        except RuntimeError:
+            continue
+
+        fig.add_trace(go.Scatter(x=X,
+                                 y=func(X, *popt),
+                                 mode='lines',
+                                 hoverinfo='skip',
+                                 name=owner_type,
+                                 line=dict(color=owners[owner_type], width=2)
+                                 ))
 
     return fig
 
@@ -354,7 +373,7 @@ def get_model_options(make):
 #     annot.get_bbox_patch().set_alpha(0.4)
 #     annot.xy = (car.x, car.y)
 #
-#     car_picture = mpimg.imread('pictures/' + car.image)
+#     car_picture = mpimg.imread('assets/' + car.image)
 #     imagebox = OffsetImage(car_picture, zoom=0.8)
 #     ab = AnnotationBbox(imagebox, (car.x - 20000, car.y - 2000))
 #

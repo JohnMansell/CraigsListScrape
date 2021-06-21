@@ -1,8 +1,12 @@
 import json
+import locale
+
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import urllib3
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import plotly.express as px
@@ -10,13 +14,10 @@ import dash_bootstrap_components as dbc
 
 from backend import *
 from layout_objects import *
+import webbrowser
 import numpy as np
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
-
-
-
-
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
 
 # ----------------------------------------------------
 #       App Layout
@@ -52,16 +53,21 @@ app.layout = html.Div([
             model_dropdown
 
         ],
-            width={'size': 2,
+            width={'size': 1,
                    'offset': 1}
         ),
 
         # --- Graph
-        dbc.Spinner(dbc.Col(dcc.Graph(id='live-graph', animate=True)),
-                    color='primary',
-                    type='border',
-                    fullscreen=False,
-                    size='lg'),
+        dbc.Spinner(dbc.Col(
+            [
+                dcc.Graph(id='live-graph', animate=True, hoverData=None),
+                find_cars_button
+            ], align='center'),
+            color='primary',
+            type='border',
+            fullscreen=False,
+            size='lg',
+            show_initially=False),
 
         # --- Details
         details_card,
@@ -69,7 +75,7 @@ app.layout = html.Div([
     ]),
 
     # --- Find Cars
-    dbc.Row(find_cars_button, justify='center')
+    # dbc.Row(find_cars_button, justify='center')
 
 ])
 
@@ -99,30 +105,48 @@ def update_make_radio_items(make):
               [State('slct_city', 'value'),
                State('slct_state', 'value')])
 def make_button_clickable(model, city, state):
-    return [False, False]
+    if None in [model, city, state]:
+        return [True, True]
 
-    # if None in [model, city, state]:
-    #     return [True, True]
-    #
-    # else:
-    #     return [False, False]
+    else:
+        return [False, False]
+
 
 @app.callback(
     [Output('card_title', 'children'),
-     Output('card_text', 'children')],
+     Output('card_price', 'children'),
+     Output('card_text', 'children'),
+     Output('card_img', 'src')],
     [Input('live-graph', 'hoverData')]
 )
 def display_hover_data(hoverData):
+    if hoverData is None:
+        return ["", "", "", ""]
 
     data = hoverData['points'][0]
-
     title = data['hovertext']
-    miles = data['x']
-    price = data['y']
+    dolars, cents = locale.currency(data['y'], grouping=True).split('.')
     attributes = data['customdata'][2]
     details = [f'{key}: {attributes[key]} \n' for key in sorted(attributes.keys())]
 
-    return [title, details]
+    img_src = f'{data["customdata"][1]}'
+    img = app.get_asset_url(img_src)
+
+    return [title, dolars, details, img]
+
+
+@app.callback(
+    [Output('hidden_div', 'children')],
+    [Input('live-graph', 'clickData')]
+)
+def data_on_click(clickData):
+    if clickData is None:
+        return [""]
+
+    url = clickData['points'][0]['customdata'][0]
+    webbrowser.open(url, new=2, autoraise=False)
+
+    return [url]
 
 
 @app.callback([
@@ -135,6 +159,11 @@ def display_hover_data(hoverData):
 )
 def on_click(n_clicks, state, city, make, model):
 
+    if n_clicks is None:
+        fig = go.Figure()
+        fig.update_layout(height=900, width=1500)
+        return [fig]
+
     if None in [city, state]:
         state = 'CA'
         city = 'Orange County'
@@ -144,30 +173,34 @@ def on_click(n_clicks, state, city, make, model):
     # --- Owner
     url = build_url(state, city, make, model, 'owner')
     car_elems = get_car_elems(url)
-
-    df_cars = get_all_cars(car_elems, 'owner')
-    df_cars = df_cars.sort_values(by=['miles'])
-
-    fig = (px.scatter(df_cars,
-                      x='miles',
-                      y='price',
-                      custom_data=['url', 'image', 'attributes'],
-                      hover_name='title'))
+    df_owner = get_all_cars(car_elems, 'owner')
 
     # --- Dealer
-    # url = build_url(state, city, make, model, 'dealer')
-    # car_elems = get_car_elems(url)
-    #
-    # df_cars = get_all_cars(car_elems, 'dealer')
-    # fig.add_trace(px.scatter(df_cars, x='miles', y='price', custom_data=['url', 'image'], hover_name='title'))
+    url = build_url(state, city, make, model, 'dealer')
+    car_elems = get_car_elems(url)
+    df_dealer = get_all_cars(car_elems, 'dealer')
 
+    # --- Data Frame
+    df_cars = pd.concat([df_owner, df_dealer])
+    df_cars = df_cars.sort_values(by=['miles'])
+
+    # --- Figure
+    fig = px.scatter(df_cars,
+                     x='miles',
+                     y='price',
+                     custom_data=['url', 'image', 'attributes'],
+                     color='owner_type',
+                     hover_name='title',
+                     color_discrete_map={'owner': 'blue', 'dealer': 'red'}
+                     )
 
     max_x = max(df_cars.miles) + 5000
     max_y = max(df_cars.price) + 1000
 
     fig.update_layout(go.Layout(xaxis=dict(range=[0, max_x]),
                                 yaxis=dict(range=[0, max_y]),
-                                height=700, width=1200))
+                                height=900, width=1500))
+
     fig = solve_curves(fig, df_cars)
 
     return [fig]
