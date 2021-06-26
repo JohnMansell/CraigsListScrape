@@ -1,9 +1,10 @@
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
+
 from backend import *
 
-# --- Initialize Functions
+# # --- Initialize Functions
 get_locations()
 states = get_states()
 cities = get_cities('CA')
@@ -61,7 +62,6 @@ details_card = dbc.Card(
                 html.H4("Card Title", id='card_title'),
                 html.H5("Price", id='card_price', style={'color': colors['price']}),
                 html.P("Card text", id='card_text', style={'whiteSpace': 'pre-wrap'}),
-                html.Div(children=[], hidden=True, id='hidden_div')
             ])
     ], id='card',
     style={'width': '18rem'}

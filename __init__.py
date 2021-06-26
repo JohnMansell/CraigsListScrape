@@ -8,7 +8,7 @@ import plotly.express as px
 from layout_objects import *
 import webbrowser
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=False)
 
 # ----------------------------------------------------
 #       App Layout
@@ -66,7 +66,7 @@ app.layout = html.Div([
     ]),
 
     # --- Find Cars
-    # dbc.Row(find_cars_button, justify='center')
+    html.H1(children=["Who Awesome"], hidden=True, id='hidden_div')
 
 ])
 
@@ -96,11 +96,12 @@ def update_make_radio_items(make):
               [State('slct_city', 'value'),
                State('slct_state', 'value')])
 def make_button_clickable(model, city, state):
-    if None in [model, city, state]:
-        return [True, True]
-
-    else:
-        return [False, False]
+    # if None in [model, city, state]:
+    #     return [True, True]
+    #
+    # else:
+    #     return [False, False]
+    return [False, False]
 
 
 @app.callback(
@@ -126,18 +127,22 @@ def display_hover_data(hoverData):
     return [title, dolars, details, img]
 
 
-@app.callback(
-    [Output('hidden_div', 'children')],
-    [Input('live-graph', 'clickData')]
+# --- Live Graph : On Click
+app.clientside_callback(
+    """
+    function(clickData) {
+    
+        if (clickData == null)
+            { return " " }
+    
+        var url = clickData['points'][0]['customdata'][0];
+        window.open(url);
+        return " ";
+    }
+    """,
+    Output('hidden_div', 'children'),
+    Input('live-graph', 'clickData')
 )
-def data_on_click(clickData):
-    if clickData is None:
-        return [""]
-
-    url = clickData['points'][0]['customdata'][0]
-    webbrowser.open(url, new=2, autoraise=False)
-
-    return [url]
 
 
 @app.callback([
@@ -200,6 +205,8 @@ def on_click(n_clicks, state, city, make, model):
 # ----------------------------------------------------
 #           Run
 # ----------------------------------------------------
+server = app.server
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
