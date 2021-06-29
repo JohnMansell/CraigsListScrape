@@ -3,21 +3,24 @@ import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 import dash
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import plotly.express as px
 
 from layout_objects import *
 import webbrowser
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=False)
+app = dash.Dash(__name__,
+                external_stylesheets=[dbc.themes.SUPERHERO],
+                suppress_callback_exceptions=False,
+                prevent_initial_callbacks=True)
 
 # ----------------------------------------------------
 #       App Layout
 # ----------------------------------------------------
 
-app.layout = html.Div([
+app.layout = html.Div(id='main_div', children=[
 
     header,
-
     html.Br(),
 
     dbc.Row([
@@ -25,50 +28,46 @@ app.layout = html.Div([
         # --- Selection Column :: Location, Make, Model
         dbc.Col([
 
-            # --- Row 1 :: Text
-            html.H5('Location'),
+            title_text,
 
-            # --- State
-            state_dropdown,
+            location_row,
 
-            # --- City
-            city_dropdown,
+            make_model_row,
 
-            # --- Make Model
-            html.H5('Make / Model'),
-
-            # --- Make
-            make_dropdown,
-
-            # --- Model
-            model_dropdown
+            find_cars_button
 
         ],
-            width={'size': 1,
-                   'offset': 1}
+            width={'size': 3,
+                   'offset': 1},
         ),
 
         # --- Graph
-        dbc.Spinner(dbc.Col(
-            [
-                dcc.Graph(id='live-graph', animate=True, hoverData=None),
-                find_cars_button
-            ], align='center'),
-            color='primary',
-            type='border',
-            fullscreen=False,
-            size='lg',
-            show_initially=False),
+        dbc.Col(
+            dcc.Loading(
+                dbc.Collapse(
+                    dcc.Graph(id='live-graph', style={'height': '60vh'}), id='collapse'), color='#f9c445', fullscreen=True),
+        width={'size': 7, 'offset': 0})
 
-        # --- Details
-        details_card,
+    ], justify='start'),
 
-    ]),
+    # --- Details Card
+    dbc.Row(
+        [
+            dbc.Col(details_image, align='start', width={'size': 2, 'offset': 5}),
+            dbc.Col(details_card, width=3)
+        ], style={'align-items': 'start', 'justify-content': 'start', 'padding-top': '15px'},
+        no_gutters=True),
 
-    # --- Find Cars
-    html.H1(children=["Who Awesome"], hidden=True, id='hidden_div')
+    # --- Hidden Div
+    html.H1(children=["Who's Awesome"], hidden=True, id='hidden_div')
 
-])
+],
+  style={'background-image': 'url(assets/background/background_1.jpg)',
+         'background-size': 'cover',
+         'background-position': 'center',
+         'height': '100vh',
+         'width': '100vw',
+         'background-repeat': 'no-repeat'})
 
 
 # ----------------------------------------------------
@@ -90,19 +89,6 @@ def update_make_radio_items(make):
     return model_options
 
 
-@app.callback([Output('button_find_cars', 'disabled'),
-               Output('button_find_cars', 'outline')],
-              [Input('model_ratio_items', 'value')],
-              [State('slct_city', 'value'),
-               State('slct_state', 'value')])
-def make_button_clickable(model, city, state):
-    # if None in [model, city, state]:
-    #     return [True, True]
-    #
-    # else:
-    #     return [False, False]
-    return [False, False]
-
 
 @app.callback(
     [Output('card_title', 'children'),
@@ -121,7 +107,8 @@ def display_hover_data(hoverData):
     attributes = data['customdata'][2]
     details = [f'{key}: {attributes[key]} \n' for key in sorted(attributes.keys())]
 
-    img_src = f'{data["customdata"][1]}'
+    img_src = f'car_images/{data["customdata"][1]}'
+
     img = app.get_asset_url(img_src)
 
     return [title, dolars, details, img]
@@ -146,7 +133,9 @@ app.clientside_callback(
 
 
 @app.callback([
-    Output('live-graph', 'figure')],
+    Output('live-graph', 'figure'),
+    Output('collapse', 'is_open'),
+    Output('main_div', 'style')],
     [Input('button_find_cars', 'n_clicks')],
     [State('slct_state', 'value'),
      State('slct_city', 'value'),
@@ -154,17 +143,11 @@ app.clientside_callback(
      State('model_ratio_items', 'value')]
 )
 def on_click(n_clicks, state, city, make, model):
-
     if n_clicks is None:
-        fig = go.Figure()
-        fig.update_layout(height=900, width=1500)
-        return [fig]
+        raise PreventUpdate
 
-    if None in [city, state]:
-        state = 'CA'
-        city = 'Orange County'
-        make = 'Honda'
-        model = 'Civic'
+    if None in [state, city, make, model]:
+        raise PreventUpdate
 
     # --- Owner
     url = build_url(state, city, make, model, 'owner')
@@ -195,18 +178,21 @@ def on_click(n_clicks, state, city, make, model):
 
     fig.update_layout(go.Layout(xaxis=dict(range=[0, max_x]),
                                 yaxis=dict(range=[0, max_y]),
-                                height=900, width=1500))
+                                plot_bgcolor='#DEF0FF',
+                                autosize=True,
+                                font=dict(size=22),
+                                legend=dict(bgcolor='#f9c445', x=0.8, y=0.9, font=dict(size=22))))
+
 
     fig = solve_curves(fig, df_cars)
 
-    return [fig]
+    return [fig, True, background_style_2]
 
 
 # ----------------------------------------------------
 #           Run
 # ----------------------------------------------------
 server = app.server
-
 
 if __name__ == '__main__':
     app.run_server(debug=True)

@@ -11,10 +11,14 @@ import re
 
 import numpy as np
 
+CWD = os.path.dirname(__file__)
+
 df_locations = None
 
-if os.path.exists('resources/df_make_model.p'):
-    df_make = pickle.load(open('resources/df_make_model.p', 'rb'))
+df_make_path = os.path.join(CWD, 'resources/df_make_model.p')
+
+if os.path.exists(df_make_path):
+    df_make = pickle.load(open(df_make_path, 'rb'))
 
 
 class car_object:
@@ -30,9 +34,9 @@ class car_object:
         self.image = None
 
 
-path = 'resources/p_car_objects.p'
-if os.path.exists(path):
-    car_object_dict = pickle.load(open(path, 'rb'))
+df_car_object_path = os.path.join(CWD, 'resources/p_car_objects.p')
+if os.path.exists(df_car_object_path):
+    car_object_dict = pickle.load(open(df_car_object_path, 'rb'))
 
 else:
     car_object_dict = {}
@@ -48,9 +52,6 @@ def sanitize_string(text_in):
 
     text_out = emoji_pattern.sub(r'', text_in)
 
-    print(text_in)
-    print(text_out, "\n\n")
-
     return text_out
 
 
@@ -58,9 +59,9 @@ def get_locations():
 
     global df_locations
 
-    pickle_path = 'resources/df_cities.p'
-    if os.path.exists(pickle_path):
-        df_locations = pickle.load(open(pickle_path, 'rb'))
+    df_cities_path = os.path.join(CWD, 'resources/df_cities.p')
+    if os.path.exists(df_cities_path):
+        df_locations = pickle.load(open(df_cities_path, 'rb'))
         return
 
     href_list = []
@@ -97,7 +98,7 @@ def get_locations():
                               'city': cities_list,
                               'state': states_list})
 
-    pickle.dump(df_locations, open(pickle_path, 'wb'))
+    pickle.dump(df_locations, open(df_cities_path, 'wb'))
 
     return
 
@@ -137,9 +138,10 @@ def build_url(state, city, make, model, owner_type):
 def download_image(url):
     name = str(url.split('/')[-1])
 
-    if not os.path.exists(f'assets/{name}'):
-        urllib.request.urlretrieve(url, f'assets/{name}')
-        print(url)
+    img_path = os.path.join(CWD, f'assets/car_images/{name}')
+
+    if not os.path.exists(img_path):
+        urllib.request.urlretrieve(url, img_path)
 
     return name
 
@@ -202,7 +204,6 @@ def get_all_cars(car_elems, owner_type):
             attributes = car_soup.find_all('p', class_='attrgroup')
 
         except ConnectionError:
-            print("Not connected -- ", url)
             continue
 
         # --- Initialize Car
@@ -231,7 +232,7 @@ def get_all_cars(car_elems, owner_type):
         car_object_dict[id] = car
         car_objects.append(car)
 
-    pickle.dump(car_object_dict, open(path, 'wb'))
+    pickle.dump(car_object_dict, open(df_car_object_path, 'wb'))
 
     df_cars = pd.DataFrame([o.__dict__ for o in car_objects])
 
