@@ -157,7 +157,7 @@ def get_car_elems(URL):
     page = requests.get(URL)
     soup = BeautifulSoup(page.content, 'html.parser')
     results = soup.find(class_='rows')
-    car_elems = results.find_all('li', class_='result-row')
+    car_elems = results.find_all('li', class_='result-row') if results else list()
 
     return car_elems
 
@@ -191,7 +191,7 @@ def get_all_cars(car_elems, owner_type):
         try:
             download_image(images[0])
         except:
-            print("No Image", image_url)
+            print("No Image", image_url, "ids = ", ids)
 
         # --- Price
         price = price.replace(',', '')

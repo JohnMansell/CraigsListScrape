@@ -8,7 +8,7 @@ from backend import *
 # # --- Initialize Functions
 get_locations()
 states = get_states()
-cities = get_cities('CA')
+cities = get_cities('AZ')
 make_options = get_make_options()
 
 colors = {
