@@ -19,9 +19,18 @@
   color: #f9c445;
 }
 
-.custom_dropdown {
+.dropdown {
   color: black;
   outline-color: #0f75bc;
   border-width: thick;
   border-color: #0f75bc;
+}
+
+.dropdown-content {
+  min-width: 500px;
+  background-color: orangered;
+}
+
+.VirtualizedSelectOption {
+  white-space: nowrap;
 }

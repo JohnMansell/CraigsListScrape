@@ -1,6 +1,6 @@
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
 
 from backend import *
@@ -43,7 +43,7 @@ state_dropdown = dcc.Dropdown(id='slct_state',
                               options=states,
                               placeholder='state',
                               multi=False,
-                              className='custom_dropdown',
+                              className='dropdown',
                               clearable=False)
 
 # --- City
@@ -51,28 +51,28 @@ city_dropdown = dcc.Dropdown(id='slct_city',
                              options=cities,
                              placeholder='city',
                              multi=False,
-                             className='custom_dropdown',
+                             className='dropdown',
                              clearable=False)
 
 # --- Location Row
 location_row = dbc.Row([
-    dbc.Col(html.P("LOCATION", style={'color': 'black'}), width={'size': 3}),
-    dbc.Col(state_dropdown, width={'size': 4}),
-    dbc.Col(city_dropdown, width={'size': 5}),
+    dbc.Col(html.P("LOCATION", style={'color': 'black'}), xs={'size': 12}, lg={'size': 3}),
+    dbc.Col(state_dropdown, xs={'size': 12}, lg={'size': 4}),
+    dbc.Col(city_dropdown, xs={'size': 12}, lg={'size': 5}),
 ], style={'width': '75%'})
 
 # --- Make
 make_dropdown = dcc.Dropdown(id='make_dropdown',
                              placeholder='make',
                              options=make_options,
-                             className='custom_dropdown',
+                             className='dropdown',
                              clearable=False
                              )
 
 # --- Model
 model_dropdown = dcc.Dropdown(id='model_ratio_items',
                               options=[],
-                              className='custom_dropdown',
+                              className='dropdown',
                               placeholder='model',
                               clearable=False)
 

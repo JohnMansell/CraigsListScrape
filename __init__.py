@@ -56,7 +56,7 @@ app.layout = html.Div(id='main_div', children=[
             dbc.Col(details_image, align='start', width={'size': 2, 'offset': 5}),
             dbc.Col(details_card, width=3)
         ], style={'align-items': 'start', 'justify-content': 'start', 'padding-top': '15px'},
-        no_gutters=True),
+        className="g-0"),
 
     # --- Hidden Div
     html.H1(children=["Who's Awesome"], hidden=True, id='hidden_div')
@@ -147,7 +147,11 @@ def on_click(n_clicks, state, city, make, model):
         raise PreventUpdate
 
     if None in [state, city, make, model]:
-        raise PreventUpdate
+        state = "CA"
+        city = 'Orange County'
+        make = 'honda'
+        model = 'civic'
+        # raise PreventUpdate
 
     # --- Owner
     url = build_url(state, city, make, model, 'owner')
