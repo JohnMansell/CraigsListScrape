@@ -1,13 +1,19 @@
-import locale
 
+# --- Modules
+import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-import dash
+
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.express as px
 
+# --- Project Modules
 from layout_objects import *
-import webbrowser
+from color_logging import *
+import web_interface as web
+
+# --- Logging
+logger = get_logger(__name__)
 
 app = dash.Dash(__name__,
                 external_stylesheets=[dbc.themes.SUPERHERO],
@@ -22,20 +28,16 @@ app.layout = html.Div(id='main_div', children=[
 
     header,
     html.Br(),
+    html.Br(),
 
     dbc.Row([
 
         # --- Selection Column :: Location, Make, Model
         dbc.Col([
-
             title_text,
-
             location_row,
-
             make_model_row,
-
             find_cars_button
-
         ],
             width={'size': 3,
                    'offset': 1},
@@ -155,13 +157,20 @@ def on_click(n_clicks, state, city, make, model):
 
     # --- Owner
     url = build_url(state, city, make, model, 'owner')
-    car_elems = get_car_elems(url)
+    car_elems = web.get_car_elems(url)
     df_owner = get_all_cars(car_elems, 'owner')
+    if logger.level <= logging.INFO:
+        logger.info(line_break("DF Owner"))
+        pd.options.display.max_rows = 1_000
+        print(df_owner)
 
     # --- Dealer
     url = build_url(state, city, make, model, 'dealer')
-    car_elems = get_car_elems(url)
+    car_elems = web.get_car_elems(url)
     df_dealer = get_all_cars(car_elems, 'dealer')
+    if logger.level <= logging.INFO:
+        logger.info(line_break("DF Dealer"))
+        print(df_dealer)
 
     # --- Data Frame
     df_cars = pd.concat([df_owner, df_dealer])
@@ -186,7 +195,6 @@ def on_click(n_clicks, state, city, make, model):
                                 autosize=True,
                                 font=dict(size=22),
                                 legend=dict(bgcolor='#f9c445', x=0.8, y=0.9, font=dict(size=22))))
-
 
     fig = solve_curves(fig, df_cars)
 

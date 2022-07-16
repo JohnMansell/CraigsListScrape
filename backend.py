@@ -1,5 +1,5 @@
-import requests
-from bs4 import BeautifulSoup
+
+# --- Modules
 import webbrowser
 import pandas as pd
 import pickle
@@ -8,8 +8,10 @@ import os
 import plotly.graph_objs as go
 from scipy.optimize import curve_fit
 import re
-
 import numpy as np
+import web_interface
+from color_logging import *
+logger = get_logger(__name__)
 
 CWD = os.path.dirname(__file__)
 
@@ -64,40 +66,8 @@ def get_locations():
         df_locations = pickle.load(open(df_cities_path, 'rb'))
         return
 
-    href_list = []
-    cities_list = []
-    states_list = []
-
-    # --- Get geo site list
-    URL = 'https://geo.craigslist.org/iso/us'
-    page = requests.get(URL)
-    soup = BeautifulSoup(page.content, 'html.parser')
-
-    # --- Parse Cities
-    for ultag in soup.find_all('ul', {'class': 'height6 geo-site-list'}):
-        for litag in ultag.find_all('li'):
-
-            text = litag.text
-            try:
-                city, state = text.split(',')
-            except:
-                print("-------------")
-                print(text)
-                city = input("City :: ")
-                state = input("State :: ")
-
-                if len(city) == 0:
-                    city = text.title()
-
-            href_list.append(litag.a.get('href'))
-            cities_list.append(city.title())
-            states_list.append(state)
-
-    # --- Data Frame
-    df_locations = pd.DataFrame({'href': href_list,
-                              'city': cities_list,
-                              'state': states_list})
-
+    # --- Build Cities Data Frame
+    df_locations = web_interface.get_cities_from_web()
     pickle.dump(df_locations, open(df_cities_path, 'wb'))
 
     return
@@ -140,9 +110,11 @@ def download_image(url):
 
     img_path = os.path.join(CWD, f'assets/car_images/{name}')
 
+    logger.debug(f"Downloading Image {url}")
     if not os.path.exists(img_path):
-        urllib.request.urlretrieve(url, img_path)
-
+        filename, headers = urllib.request.urlretrieve(url, img_path)
+        logger.debug(f"{filename=}")
+        logger.debug(f"{headers=}")
     return name
 
 
@@ -151,15 +123,6 @@ def on_click(event):
 
     chrome_path = '/usr/bin/google-chrome %s'
     webbrowser.get(chrome_path).open(url)
-
-
-def get_car_elems(URL):
-    page = requests.get(URL)
-    soup = BeautifulSoup(page.content, 'html.parser')
-    results = soup.find(class_='rows')
-    car_elems = results.find_all('li', class_='result-row') if results else list()
-
-    return car_elems
 
 
 def get_all_cars(car_elems, owner_type):
@@ -180,8 +143,8 @@ def get_all_cars(car_elems, owner_type):
             title = car.find('a', class_='result-title hdrlnk').text.strip()
             title = sanitize_string(title)
 
-        except TypeError:
-            print("Cant connect")
+        except Exception as e:
+            logger.error(e)
             continue
 
         # --- Car Image
@@ -191,7 +154,8 @@ def get_all_cars(car_elems, owner_type):
         try:
             download_image(images[0])
         except:
-            print("No Image", image_url, "ids = ", ids)
+            logger.error(f"Cannot download {image_url}")
+            logger.error(f"{images=}")
 
         # --- Price
         price = price.replace(',', '')
@@ -199,11 +163,10 @@ def get_all_cars(car_elems, owner_type):
 
         # --- Car Details
         try:
-            car_page = requests.get(url)
-            car_soup = BeautifulSoup(car_page.content, 'html.parser')
-            attributes = car_soup.find_all('p', class_='attrgroup')
+            attributes = web_interface.get_car_attributes(url)
 
         except ConnectionError:
+            logger.error(f"Connection error {url=}")
             continue
 
         # --- Initialize Car
