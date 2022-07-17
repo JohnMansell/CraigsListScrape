@@ -18,6 +18,7 @@ CWD = os.path.dirname(__file__)
 df_locations = None
 
 df_make_path = os.path.join(CWD, 'resources/df_make_model.p')
+logger.info(f"{df_make_path=}")
 
 if os.path.exists(df_make_path):
     df_make = pickle.load(open(df_make_path, 'rb'))
@@ -67,6 +68,7 @@ def get_locations():
         return
 
     # --- Build Cities Data Frame
+    logger.error(f"{df_cities_path=}")
     df_locations = web_interface.get_cities_from_web()
     pickle.dump(df_locations, open(df_cities_path, 'wb'))
 
