@@ -153,8 +153,8 @@ def get_all_cars(car_elems, owner_type):
         images = [image_url.format(i.split(',')[0]) for i in ids]
         try:
             download_image(images[0])
-        except:
-            logger.error(f"Cannot download {image_url}")
+        except Exception as e:
+            logger.error(f"/n{e}. Cannot download {images[0]}")
             logger.error(f"{images=}")
 
         # --- Price
