@@ -103,6 +103,7 @@ def build_url(state, city, make, model, owner_type):
     query = '?auto_make_model='
 
     URL = base_url + '/d/cars-trucks-by-owner/search/' + owner + query + make + '%20' + model
+    logger.info(f"Search URL = {URL}")
 
     return URL
 
