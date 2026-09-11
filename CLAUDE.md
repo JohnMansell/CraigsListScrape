@@ -6,20 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Dash web app that scrapes Craigslist car listings with headless Chrome (Selenium) and plots price vs. mileage, with an exponential-decay fit line per owner type. Hovering a point shows listing details and the thumbnail; clicking opens the listing.
 
+A from-scratch rebuild is in progress in the `craigslist/` package, tracked in GitHub issues #1 to #10 (NiceGUI + ECharts, httpx + selectolax, SQLite, scipy, loguru). It lives alongside the Dash app until issue #10 removes the old code.
+
 ## Commands
 
-uv-managed, Python 3.14 (`.python-version`). Not a package: there is no build system, and `__init__.py` is run as a script.
+uv-managed, Python 3.14 (`.python-version`). Not an installable package: there is no build system. The Dash app runs `__init__.py` as a script; the rebuild runs as `python -m craigslist` from the repo root.
 
 ```
-uv sync                         # create .venv from uv.lock
-uv run __init__.py              # Dash dev server (debug=True), http://127.0.0.1:8050
+uv sync                                  # create .venv from uv.lock
+uv run __init__.py                       # Dash dev server (debug=True), http://127.0.0.1:8050
 uv run __init__.py --log DEBUG
-uv add <pkg>                    # add a dependency (updates pyproject.toml and uv.lock)
+uv run python -m craigslist --log DEBUG  # rebuild entry point
+uv run pytest                            # all tests
+uv run pytest tests/test_log.py          # one test file
+uv run --with mypy mypy --explicit-package-bases craigslist tests
+uv add <pkg>                             # add a dependency (updates pyproject.toml and uv.lock)
 ```
 
 - Run from the repo root. Image downloads use the relative path `assets/car_images/`.
 - No Chrome install needed. Selenium Manager downloads Chrome for Testing and chromedriver into `~/.cache/selenium` on first launch.
-- No tests or lint config exist.
+- Tests cover only the `craigslist/` rebuild; the Dash app has none. There is no lint config, and mypy is not a dependency.
+- The root `__init__.py` makes pytest and mypy treat the repo root as a package and import the Dash app. `tests/conftest.py` stops pytest doing that, and mypy needs `--explicit-package-bases`. Both workarounds go away with issue #10.
+- New code must not use star imports or do work at import time. Tests check both.
 - `scratch.py` and `scratch2.py` are old experiments. They import `webdriver_manager` and `bs4`, which are not dependencies.
 
 ## Architecture
