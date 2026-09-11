@@ -1,104 +1,79 @@
 import inspect
-import sys
 import logging
 import logging.config
 import logging.handlers
 import os
-import argparse
 import json
-import copy
+import selenium
+
+from rich.traceback import install
+from rich.logging import RichHandler
+
+import argparse
+
+# -----------------------------
+#       Global Args
+# -----------------------------
+GLOBAL_ARGS = dict()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Spartan Super Resolution Web Server")
+    parser.add_argument('--log',
+                        dest='log_level',
+                        type=str,
+                        default='INFO',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                        help='Set the logging level')
+
+    args = parser.parse_args()
+    GLOBAL_ARGS['log_level'] = args.log_level
+
+
+parse_args()
 
 
 # -----------------------------
 #       Config
 # -----------------------------
 
-# --- Argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('--log', action='store', required=False, default='info')
-args, unknown = parser.parse_known_args()
-
 # --- Level
-level_config = {'debug': logging.DEBUG,
-                'info': logging.INFO,
-                'warning': logging.WARNING,
-                'error': logging.ERROR}
+level_config = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+}
 
-log_level = level_config[args.log]
+log_level = level_config[GLOBAL_ARGS['log_level'].lower()]
 
 # --- Path
-LOGDIR = '/var/log/craigslist'
+LOGDIR = os.environ.get('CRAIGSLIST_LOGDIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs'))
 if not os.path.exists(LOGDIR):
     os.makedirs(LOGDIR)
 
 LOG_FILENAME = LOGDIR + '/craigslist.log'
+FORMAT = "Thread[%(threadName)s] %(module)-15s::%(funcName)10s %(levelname)8s ::[ %(lineno)3s ] %(message)s"
 logging.basicConfig(
-    level=log_level,
-    format='%(levelname)s - %(asctime)s - %(name)s - %(message)s'
-)
+        level=log_level,
+        format=FORMAT,
+        datefmt="[%X]")
+
 
 # ToDo: should be a better place for this, but logging is basically a universal module, so it ended up here for now
 MYPID = os.getpid()
-
-# --------------------------------------
-#           Color Format
-# --------------------------------------
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-
-# Background = 40 + [color]
-# Foreground = 30
-
-#These are the sequences need to get colored ouput
-RESET_SEQ = "\033[0m"
-COLOR_SEQ = "\033[1;%dm"
-BOLD_SEQ = "\033[1m"
-COLORS = {
-    'WARNING': YELLOW,
-    'INFO': WHITE,
-    'DEBUG': BLUE,
-    'CRITICAL': YELLOW,
-    'ERROR': RED
-}
-
-
-# --------------------------------------
-#           Color Format
-# --------------------------------------
-class ColoredFormatter(logging.Formatter):
-
-    def __init__(self, format_string):
-        logging.Formatter.__init__(self, format_string)
-
-    # @staticmethod
-    # def formatter_message(message):
-    #     return message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
-
-    def format(self, record):
-        levelname = record.levelname
-        message = record.msg
-        message = str(message) if message else "None"
-
-        rcd_copy = copy.copy(record)
-        if levelname in COLORS:
-
-            # --- Level Name
-            levelname_color = (COLOR_SEQ % (30 + COLORS[levelname])) + levelname + RESET_SEQ
-            rcd_copy.levelname = levelname_color
-
-            # --- Message
-            if levelname in ['WARNING', 'ERROR', 'CRITICAL']:
-                message_color = (COLOR_SEQ % (30 + COLORS[levelname])) + message + RESET_SEQ
-                rcd_copy.msg = message_color
-
-        return logging.Formatter.format(self, rcd_copy)
 
 
 # --------------------------------------
 #           Get Logger
 # --------------------------------------
-def get_logger(name, level=log_level):
+def get_logger(name, console_level=log_level, file_level=log_level) -> logging.Logger:
+
+    # --- Log Path
+    calling_file_path = inspect.stack()[1].filename
+    calling_dir = os.path.dirname(calling_file_path)
+    filename = 'server.log' if 'backend' in calling_dir else 'client.log'
+    log_file_path = os.path.join(LOGDIR, filename)
 
     # --- Logger
     new_logger = logging.getLogger(name)
@@ -106,26 +81,19 @@ def get_logger(name, level=log_level):
     new_logger.propagate = False
 
     # --- Handlers
-    stream_h = logging.StreamHandler(sys.stdout)
-    file_h = logging.handlers.TimedRotatingFileHandler(filename=LOG_FILENAME, when='midnight', backupCount=10)
+    stream_handler = RichHandler(rich_tracebacks=True, tracebacks_show_locals=True, tracebacks_suppress=[selenium])
+    file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_file_path, when="midnight", backupCount=10)
 
     # --- Format
-    format_string = "%(asctime)s| %(module)-18s [ %(lineno)3s ] ::  %(levelname)8s :: %(message)s"
-    time_format   = "%y-%m-%d %H:%M:%S"
-    s_formatter = ColoredFormatter(format_string)
-    f_formatter = logging.Formatter(format_string)
-    stream_h.setFormatter(s_formatter)
-    file_h.setFormatter(f_formatter)
+    file_handler.setFormatter(logging.Formatter(FORMAT))
 
     # --- Level
-    stream_h.setLevel(level)
-    file_h.setLevel(level)
+    stream_handler.setLevel(console_level)
+    file_handler.setLevel(file_level)
 
-    # --- Add handlers
-    new_logger.addHandler(stream_h)
-    new_logger.addHandler(file_h)
-
-    print(f"Creating new logger : {name} - {logging.getLevelName(new_logger.getEffectiveLevel())}")
+    # --- Add Handlers
+    new_logger.addHandler(stream_handler)
+    new_logger.addHandler(file_handler)
 
     return new_logger
 

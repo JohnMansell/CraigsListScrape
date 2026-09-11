@@ -1,27 +1,22 @@
 
-# --- Modules
-import webbrowser
+# --- Python
 import pandas as pd
 import pickle
-import urllib.request
-import os
-import plotly.graph_objs as go
 from scipy.optimize import curve_fit
 import re
 import numpy as np
-import web_interface
+import plotly.graph_objs as go
+
+
+# --- Project
+from web_interface import Web_Interface
+
+# --- Logging
 from color_logging import *
 logger = get_logger(__name__)
 
+
 CWD = os.path.dirname(__file__)
-
-df_locations = None
-
-df_make_path = os.path.join(CWD, 'resources/df_make_model.p')
-logger.info(f"{df_make_path=}")
-
-if os.path.exists(df_make_path):
-    df_make = pickle.load(open(df_make_path, 'rb'))
 
 
 class car_object:
@@ -35,225 +30,205 @@ class car_object:
         self.attributes = {}
         self.hover_data = ''
         self.image = None
+        self.id = 0
 
 
-df_car_object_path = os.path.join(CWD, 'resources/p_car_objects.p')
-if os.path.exists(df_car_object_path):
-    car_object_dict = pickle.load(open(df_car_object_path, 'rb'))
-
-else:
-    car_object_dict = {}
+DF_CAR_OBJECT_PATH = os.path.join(CWD, 'resources/p_car_objects.p')
 
 
-def sanitize_string(text_in):
-    emoji_pattern = re.compile("["
-                               u"\U0001F600-\U0001F64F"  # emoticons
-                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                               "]+", flags=re.UNICODE)
+class Backend:
+    def __init__(self):
 
-    text_out = emoji_pattern.sub(r'', text_in)
+        self.web = Web_Interface()
+        self.makes_and_models = None
+        self.locations = None
+        self.car_object_dict = {}
 
-    return text_out
+        # --- Object Dict
+        if os.path.exists(DF_CAR_OBJECT_PATH):
+            self.car_object_dict = pickle.load(open(DF_CAR_OBJECT_PATH, 'rb'))
 
+    @staticmethod
+    def sanitize_string(text_in):
+        emoji_pattern = re.compile('['
+                                   u'\U0001F600-\U0001F64F'  # emoticons
+                                   u'\U0001F300-\U0001F5FF'  # symbols & pictographs
+                                   u'\U0001F680-\U0001F6FF'  # transport & map symbols
+                                   u'\U0001F1E0-\U0001F1FF'  # flags (iOS)
+                                   ']+', flags=re.UNICODE)
 
-def get_locations():
+        text_out = emoji_pattern.sub(r'', text_in)
 
-    global df_locations
+        return text_out
 
-    df_cities_path = os.path.join(CWD, 'resources/df_cities.p')
-    if os.path.exists(df_cities_path):
-        df_locations = pickle.load(open(df_cities_path, 'rb'))
-        return
+    def get_makes_and_models(self):
+        if self.makes_and_models is not None:
+            return self.makes_and_models
 
-    # --- Build Cities Data Frame
-    logger.error(f"{df_cities_path=}")
-    df_locations = web_interface.get_cities_from_web()
-    pickle.dump(df_locations, open(df_cities_path, 'wb'))
+        df_make_model_path = os.path.join(CWD, 'resources/df_make_model.p')
 
-    return
+        if os.path.exists(df_make_model_path):
+            self.makes_and_models = pickle.load(open(df_make_model_path, 'rb'))
+            return self.makes_and_models
 
+        raise FileNotFoundError(f"{df_make_model_path}")
 
-def get_states():
+    def get_locations(self) -> pd.DataFrame:
 
-    states = df_locations['state'].unique().tolist()
-    states_list = [{'value': state, 'label': state} for state in sorted(states)]
+        if self.locations is not None:
+            return self.locations
 
-    return states_list
+        df_cities_path = os.path.join(CWD, 'resources/df_cities.p')
+        if os.path.exists(df_cities_path):
+            self.locations = pickle.load(open(df_cities_path, 'rb'))
+            return self.locations
 
+    def get_states(self):
+        df_locations = self.get_locations()
+        states = df_locations['state'].unique().tolist()
+        states_list = [{'value': state, 'label': state} for state in sorted(states)]
 
-def get_cities(state):
-    df_state = df_locations[df_locations['state'] == state]
-    cities = df_state['city'].tolist()
+        return states_list
 
-    city_options = [{'label': city, 'value': city} for city in cities]
+    def get_cities(self, state):
+        df_locations = self.get_locations()
+        df_state = df_locations[df_locations['state'] == state]
+        cities = df_state['city'].tolist()
 
-    return city_options
+        city_options = [{'label': city, 'value': city} for city in cities]
 
+        return city_options
 
-def build_url(state, city, make, model, owner_type):
+    def build_url(self, state, city, make, model, owner_type):
+        df_locations = self.get_locations()
+        df = df_locations[df_locations['city'] == city]
+        base_url = df.href.tolist()[0]
 
-    global df_locations
+        owner = 'cto' if owner_type == 'owner' else 'ctd'
 
-    df = df_locations[df_locations['city'] == city]
-    base_url = df.href.tolist()[0]
+        URL = f"{base_url}/search/cta?auto_make_model={make}%20{model}&purveyor={owner_type}"
+        logger.info(f"Search URL = {URL}")
 
-    owner = 'cto' if owner_type == 'owner' else 'ctd'
-    query = '?auto_make_model='
+        return URL
 
-    URL = base_url + '/d/cars-trucks-by-owner/search/' + owner + query + make + '%20' + model
-    logger.info(f"Search URL = {URL}")
+    def get_car_objects(self, car_listings, owner_type):
 
-    return URL
+        car_objects = []
+        cars_from_pickle = 0
 
-
-def download_image(url):
-    name = str(url.split('/')[-1])
-
-    img_path = os.path.join(CWD, f'assets/car_images/{name}')
-
-    logger.debug(f"Downloading Image {url}")
-    if not os.path.exists(img_path):
-        filename, headers = urllib.request.urlretrieve(url, img_path)
-        logger.debug(f"{filename=}")
-        logger.debug(f"{headers=}")
-    return name
-
-
-def on_click(event):
-    url = event.artist.obj.url
-
-    chrome_path = '/usr/bin/google-chrome %s'
-    webbrowser.get(chrome_path).open(url)
-
-
-def get_all_cars(car_elems, owner_type):
-
-    car_objects = []
-    cars_from_pickle = 0
-
-    for car in car_elems:
-        try:
-            id = car['data-pid']
-            if id in car_object_dict:
-                car_objects.append(car_object_dict[id])
-                cars_from_pickle += 1
-                continue
-
-            price = car.find('span', class_='result-price').text.strip()[1:]
-            url = car.find('a', class_='result-image gallery')['href']
-            title = car.find('a', class_='result-title hdrlnk').text.strip()
-            title = sanitize_string(title)
-
-        except Exception as e:
-            logger.error(e)
-            continue
-
-        # --- Car Image
-        image_url = 'https://images.craigslist.org/{}_300x300.jpg'
-        ids = [item.get('data-ids').replace('3:', '') for item in car.findAll("a", {"class": "result-image gallery"}, limit=10)]
-        images = [image_url.format(i.split(',')[0]) for i in ids]
-        try:
-            download_image(images[0])
-        except Exception as e:
-            logger.error(f"/n{e}. Cannot download {images[0]}")
-            logger.error(f"{images=}")
-
-        # --- Price
-        price = price.replace(',', '')
-        price = int(price)
-
-        # --- Car Details
-        try:
-            attributes = web_interface.get_car_attributes(url)
-
-        except ConnectionError:
-            logger.error(f"Connection error {url=}")
-            continue
-
-        # --- Initialize Car
-        car = car_object(owner_type)
-        car.price = price
-        car.title = title
-        car.url = url
-        car.image = ids[0].split(',')[0] + '_300x300.jpg'
-
-        # --- Get attributes
-        for att in attributes:
-            spans = att.find_all('span')
-
-            for span in spans:
-                text = span.text.strip()
-                if ':' not in text:
+        for car in car_listings:
+            try:
+                # --- Info
+                price, title, url, id = self.web.get_car_info(car)
+                if not url:
                     continue
 
-                key, value = text.split(':')
-                car.attributes[key] = value
-                if key == 'odometer':
-                    car.miles = int(value)
+                # --- Already Exists
+                if id and id in self.car_object_dict:
+                    car_objects.append(self.car_object_dict[id])
+                    cars_from_pickle += 1
+                    logger.info(self.car_object_dict[id].title)
+                    continue
 
-        car.hover_data = "\n".join([f'{key}:{car.attributes[key]}' for key in car.attributes])
+                # --- Create Object
+                car_obj = car_object(owner_type)
+                car_obj.id = id
+                car_obj.price = price
+                car_obj.title = title
+                car_obj.url = url
+                car_obj.image = self.web.get_car_image(car)
 
-        car_object_dict[id] = car
-        car_objects.append(car)
+                # --- Details
+                car_obj.attributes = self.web.get_car_attributes(car_obj.url)
+                car_obj.hover_data = "\n".join([f'{key}:{car_obj.attributes[key]}' for key in car_obj.attributes])
 
-    pickle.dump(car_object_dict, open(df_car_object_path, 'wb'))
+                # --- Milage
+                odometer = car_obj.attributes.get('odometer', '').replace(',', '').strip()
+                if odometer:
+                    car_obj.miles = int(odometer)
 
-    df_cars = pd.DataFrame([o.__dict__ for o in car_objects])
+                # --- Save for Later
+                if car_obj.image != "placeholder.png":
+                    self.car_object_dict[car_obj.id] = car_obj
+                    car_objects.append(car_obj)
+                    logger.info(f"{car_obj.title}")
 
-    return df_cars
-
-
-def get_make_options():
-
-    global df_make
-    make_unique = df_make.make.unique()
-
-    make_options = [{'label': make, 'value': make} for make in sorted(make_unique)]
-    return make_options
-
-
-def solve_curves(fig, df_cars):
-
-    def func(x, a, b, c):
-        return a * np.exp(-b * x) + c
-
-    owners = {'owner': 'blue', 'dealer': 'red'}
-
-    for owner_type in owners:
-
-        df = df_cars[(df_cars['owner_type'] == owner_type) &
-                     (df_cars['price'] > 500)]
-
-        X = np.array(df['miles'].tolist())
-        Y = np.array(df['price'].tolist())
-
-        if len(Y) < 2:
-            continue
-
-        try:
-            popt, pcov = curve_fit(func, X, Y, [2000, 0, 4000])
-
-        except RuntimeError:
-            continue
-
-        fig.add_trace(go.Scatter(x=X,
-                                 y=func(X, *popt),
-                                 mode='lines',
-                                 hoverinfo='skip',
-                                 name=owner_type,
-                                 line=dict(color=owners[owner_type], width=2)
-                                 ))
-
-    return fig
+                    pickle.dump(self.car_object_dict, open(DF_CAR_OBJECT_PATH, 'wb'))
 
 
-def get_model_options(make):
-    global df_make
+            except Exception as e:
+                logger.exception(e)
+                continue
 
-    df_make_filtered = df_make[df_make['make'] == make]
-    models_list = df_make_filtered.model.unique()
+        df_cars = pd.DataFrame([o.__dict__ for o in car_objects])
 
-    model_options = [{'label': model, 'value': model} for model in models_list]
-    return model_options
+        return df_cars
+
+    def get_make_options(self):
+        df_makes = self.get_makes_and_models()
+        make_unique = df_makes.make.unique()
+
+        make_options = [{'label': make, 'value': make} for make in sorted(make_unique)]
+        return make_options
+
+    def get_model_options(self, make):
+        df_makes = self.get_makes_and_models()
+        df_make_filtered = df_makes[df_makes['make'] == make]
+        models_list = df_make_filtered.model.unique()
+
+        model_options = [{'label': model, 'value': model} for model in models_list]
+        return model_options
+
+    def get_all_cars(self, state, city, make, model):
+        url = self.build_url(state, city, make, model, 'owner')
+        car_listings = self.web.get_all_listings(url)
+        df_owner = self.get_car_objects(car_listings, 'owner')
+
+        return df_owner
+
+    @staticmethod
+    def solve_curves(fig, df_cars):
+
+        def func(x, a, b, c):
+            return a * np.exp(-b * x) + c
+
+        def remove_outliers(df, column):
+            Q1 = df[column].quantile(0.25)
+            Q3 = df[column].quantile(0.75)
+
+            IRQ = Q3 - Q1
+            df_out = df[~((df[column] < (Q1 - 1.5 * IRQ)) | (df[column] > (Q3 + 1.5 * IRQ)))]
+
+            return df_out
+
+        owners = {'owner': 'blue', 'dealer': 'red'}
+
+        for owner_type in owners:
+
+            df = df_cars[(df_cars['owner_type'] == owner_type)]
+
+            X = np.array(df['miles'].tolist())
+            Y = np.array(df['price'].tolist())
+
+            if len(Y) < 2:
+                continue
+
+            try:
+                # popt, pcov = curve_fit(func, X, Y, [2000, 0, 4000])
+                popt, pcov = curve_fit(func, X, Y)
+
+                fig.add_trace(go.Scatter(x=X,
+                                         y=func(X, *popt),
+                                         mode='lines',
+                                         hoverinfo='skip',
+                                         name=owner_type,
+                                         line=dict(color=owners[owner_type], width=2)
+                                         ))
+
+            except RuntimeError as e:
+                logger.exception(e)
+
+        return fig
+
+
+

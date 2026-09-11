@@ -6,11 +6,12 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.express as px
+import plotly.graph_objs as go
 
 # --- Project Modules
 from layout_objects import *
 from color_logging import *
-import web_interface as web
+from backend import Backend
 
 # --- Logging
 logger = get_logger(__name__)
@@ -19,6 +20,9 @@ app = dash.Dash(__name__,
                 external_stylesheets=[dbc.themes.SUPERHERO],
                 suppress_callback_exceptions=False,
                 prevent_initial_callbacks=True)
+
+SERVER = app.server
+BACKEND = Backend()
 
 # ----------------------------------------------------
 #       App Layout
@@ -81,13 +85,13 @@ app.layout = html.Div(id='main_div', children=[
     [dash.dependencies.Input('slct_state', 'value')]
 )
 def update_city_dropdown(state):
-    return get_cities(state)
+    return BACKEND.get_cities(state)
 
 
 @app.callback(Output('model_ratio_items', 'options'),
               Input('make_dropdown', 'value'))
 def update_make_radio_items(make):
-    model_options = get_model_options(make)
+    model_options = BACKEND.get_model_options(make)
     return model_options
 
 
@@ -155,25 +159,8 @@ def on_click(n_clicks, state, city, make, model):
         model = 'civic'
         # raise PreventUpdate
 
-    # --- Owner
-    url = build_url(state, city, make, model, 'owner')
-    car_elems = web.get_car_elems(url)
-    df_owner = get_all_cars(car_elems, 'owner')
-    if logger.level <= logging.INFO:
-        logger.info(line_break("DF Owner"))
-        pd.options.display.max_rows = 1_000
-        print(df_owner)
-
-    # --- Dealer
-    url = build_url(state, city, make, model, 'dealer')
-    car_elems = web.get_car_elems(url)
-    df_dealer = get_all_cars(car_elems, 'dealer')
-    if logger.level <= logging.INFO:
-        logger.info(line_break("DF Dealer"))
-        print(df_dealer)
-
     # --- Data Frame
-    df_cars = pd.concat([df_owner, df_dealer])
+    df_cars = BACKEND.get_all_cars(state, city, make, model)
     df_cars = df_cars.sort_values(by=['miles'])
 
     # --- Figure
@@ -196,7 +183,7 @@ def on_click(n_clicks, state, city, make, model):
                                 font=dict(size=22),
                                 legend=dict(bgcolor='#f9c445', x=0.8, y=0.9, font=dict(size=22))))
 
-    fig = solve_curves(fig, df_cars)
+    fig = Backend.solve_curves(fig, df_cars)
 
     return [fig, True, background_style_2]
 
@@ -204,7 +191,5 @@ def on_click(n_clicks, state, city, make, model):
 # ----------------------------------------------------
 #           Run
 # ----------------------------------------------------
-server = app.server
-
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)
