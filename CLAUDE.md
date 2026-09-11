@@ -27,10 +27,17 @@ uv add <pkg>                             # add a dependency (updates pyproject.t
 - No Chrome install needed. Selenium Manager downloads Chrome for Testing and chromedriver into `~/.cache/selenium` on first launch.
 - Tests cover only the `craigslist/` rebuild; the Dash app has none. There is no lint config, and mypy is not a dependency.
 - The root `__init__.py` makes pytest and mypy treat the repo root as a package and import the Dash app. `tests/conftest.py` stops pytest doing that, and mypy needs `--explicit-package-bases`. Both workarounds go away with issue #10.
-- New code must not use star imports or do work at import time. Tests check both.
+- New code must not use star imports or do work at import time. Tests check for star imports, and that importing every module with stray command-line flags succeeds and creates no files or directories.
 - `scratch.py` and `scratch2.py` are old experiments. They import `webdriver_manager` and `bs4`, which are not dependencies.
 
 ## Architecture
+
+### Rebuild (`craigslist/`)
+
+- `__main__.py`: entry point. Parses `--log` and calls `configure_logging`.
+- `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
+
+### Dash app
 
 Import chain: `__init__.py` -> `layout_objects.py` -> `backend.py` -> `web_interface.py`. Every module imports `color_logging`.
 
@@ -54,7 +61,7 @@ Import chain: `__init__.py` -> `layout_objects.py` -> `backend.py` -> `web_inter
   - When scraping breaks, check these first. `get_car_objects` logs each failure and silently drops the car.
 - `on_click` crashes with `KeyError: 'miles'` when a search yields zero cars (empty DataFrame).
 - `color_logging.py` runs `argparse` on `sys.argv` at import time. Any importer (pytest, gunicorn, a REPL with extra args) fails on unrecognized arguments.
-- Logs go to `logs/` in the repo (override with `CRAIGSLIST_LOGDIR`), created at import time.
+- The Dash app logs to `logs/` in the repo (override with `CRAIGSLIST_LOGDIR`), created at import time. The rebuild writes `logs/craigslist.log` in the same directory, created only when the entry point configures logging.
 - `Backend()` launches Chrome in its constructor and never quits it. Both `layout_objects.py` and `__init__.py` create a `Backend`, so two browsers start. The Flask dev reloader (`debug=True`) can start more. chromedriver and Chrome can outlive a killed Python process, so check with `pgrep -fa selenium/chrom`.
 - Star imports carry names across modules: `os` reaches `backend.py`/`web_interface.py` through `from color_logging import *`, and `dash`/`dcc`/`html`/`dbc` reach `__init__.py` through `from layout_objects import *`. Removing an import from those modules breaks the others.
 - `get_all_cars` only scrapes `'owner'` listings. The dealer color and fit paths exist but get no data. `build_url` computes `owner` (`cto`/`ctd`) and never uses it.
