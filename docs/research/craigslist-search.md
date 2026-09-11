@@ -4,15 +4,15 @@ Research for issue #2, run 2026-09-11 from one IP. Tools: curl and httpx with a 
 
 ## Answers
 
-1. **Pagination:** the static search page is not the full result set, and it has no paging parameter. The page's own JavaScript reads results from a JSON API at `sapi.craigslist.org`, which gives the total count, every result in batches, and more fields than the static page (post id, mileage, posted time).
-2. **Rate limits:** 150 detail pages in three runs of 50 (1 s delay, no delay, 5 at once) all returned 200 with full content. No block was seen, so what a block looks like is still unknown. Recommended pacing: one request at a time with a 0.5 s delay, and stop the run on the first non-200 response or page without a post id.
+1. **Pagination:** the 36 results seen on 2026-09-10 were not a page size, since the static page lists up to about 360. Whether they were complete can't be checked now: the same search today shows 29 static and 30 in the API. The static page is not a reliable full result set, and it has no paging parameter. The page's own JavaScript reads results from a JSON API at `sapi.craigslist.org`, which gives the total count, every result in batches, and more fields than the static page (post id, mileage, posted time).
+2. **Rate limits:** 150 detail pages in three runs of 50 (1 s delay, no delay, 5 at once) all returned 200 with full content. No block was seen, so what a block looks like is still unknown. Recommended pacing: one request at a time with a 0.5 s delay, stopping on a possible block (details in section 2).
 3. **Image hotlinking:** works. `images.craigslist.org` images load in an `<img>` tag on a page served from localhost.
 
 ## 1. Pagination
 
 ### City URLs now redirect
 
-`https://<city>.craigslist.org/search/cta?...` returns 301 to `https://www.craigslist.org/search/area/<city>?...&cat=cta`. The redirect keeps search parameters but drops `s=120`, `s=360` and `page=2`, so the static page has no paging.
+`https://<city>.craigslist.org/search/cta?...` returns 301 to `https://www.craigslist.org/search/area/<city>?...&cat=cta`. The redirect keeps search parameters but drops `s=120` and `page=2` (both 301 to the plain search URL), so the static page has no paging.
 
 ### The static page is incomplete
 
@@ -36,11 +36,11 @@ Captured from headless Chrome loading `https://www.craigslist.org/search/area/lo
 1. `https://sapi.craigslist.org/web/v8/postings/search/full?batch=0-0-360-0-0&cat=cta&purveyor=owner&searchPath=area%2Flosangeles&lang=en&cc=us`
    Returns `data.totalResultCount` (3655), `data.cacheTs`, `data.decode.minPostingId`, `data.decode.minPostedDate`, and the first 360 results in `data.items`. Search filters go in as the same query parameters as the page, for example `auto_make_model=honda%20civic`.
 2. `.../postings/search/full?batch=0-<cacheTs>-0-1-0&<same search params>`
-   Returns `data.cacheId`, `data.maxPostedTs`, and all 3655 results in a short form (id, posted time, price, geo only). 243 KB.
+   Returns `data.cacheId`, `data.maxPostedTs`, and all 3655 results in a short form, `[postIdOffset, postedOffset, 145, price, geo, imageSuffix]` sometimes followed by an extra integer, with no title, slug, token or mileage. 243 KB.
 3. `https://sapi.craigslist.org/web/v8/postings/search/batch?batch=0-<offset>-1080-1-0-<maxPostedTs>-<cacheTs>&cacheId=<cacheId>&lang=en&cc=us`
    Returns `data.minPostingId` and up to 1080 full results in `data.batch`. The browser asked for offsets 0, 1080, 2160 and 3240. A wrong `maxPostedTs` gives 400 with `"That url is unsupported (bad max_posting_ts)"`.
 
-Result formats. Tagged fields are `[tag, value]` pairs:
+Result formats. Tagged fields are `[tag, value]` pairs; tags seen are 4 image codes, 6 slug, 9 odometer, 10 price text, 13 token:
 
 - `full` item: `[postIdOffset, postedOffset, 145, price, "n:m~lat~lon", imageSuffix, [13, token], [4, "3:<imageCode>", ...], [6, slug], [9, odometer], [10, "$2,900"], title]`
 - `batch` item: `[postIdOffset, title, ["3:<imageCode>", ...], [6, slug], [13, token], [9, odometer], [10, "$25,000"]]`
@@ -55,7 +55,11 @@ Checked against live detail pages:
 | Image URL | drop the `3:`, append `_600x450.jpg` (also `_300x300.jpg`, `_50x50c.jpg`) | all three sizes returned 200 `image/jpeg` |
 | Geo | lat and lon in the `n:m~lat~lon` string | matched the JSON-LD geo for the same listing |
 
-Not checked: `postedOffset + minPostedDate` for the newest listing equals `maxPostedTs`, so it is most likely the posted Unix time. Field 145 and the other `batch=` numbers are unexplained. Tag 9 was missing on 1 of 360 and 1 of 1080 results (unknown mileage), and tag 4 was missing for listings with no photos.
+Not checked: `postedOffset + minPostedDate` for the newest listing equals `maxPostedTs`, so it is most likely the posted Unix time. Field 145, the `n:m` prefix of the geo string, and the other `batch=` numbers are unexplained. Layouts vary, so read fields by tag and from the ends of the list, not by fixed position:
+
+- `full` items (22 of 360 differ): with no photos, `imageSuffix` is `0` and tag 4 is missing (8 items); an extra negative integer such as `-6` can follow `imageSuffix` (14 items). The title is always the last element.
+- `batch` items: the image list is always third but can be empty (27 of 1080).
+- Tag 9 (mileage) was missing on 1 of 360 and 1 of 1080 results, and tag 10 (price) on 2 of 1080.
 
 ## 2. Rate limits
 
@@ -69,7 +73,7 @@ Script: httpx `AsyncClient`, redirects followed, desktop Chrome User-Agent, 50 d
 
 About 30 more requests (search pages, API calls, detail spot checks) went out in the same half hour. No run showed block words or `Retry-After`. Testing stopped there rather than risk blocking the IP, so a block's status code and page are not known.
 
-**Recommendation for detail page fetches:** one at a time, 0.5 s delay between requests (about 2 pages per second, 50 pages in under 30 s). That is 4 to 10 times slower than the runs that passed. Treat any non-200 status, or a 200 page with no post id, as a possible block: log it and stop fetching for the rest of that search instead of retrying. With the JSON API, detail pages are only needed for extra attributes (VIN, fuel, transmission), since post id and mileage come with the search results.
+**Recommendation for detail page fetches:** one at a time, 0.5 s delay between requests (about 2 pages per second, 50 pages in under 30 s). That sits between run 1 (about 1 page per second) and run 2 (about 28 pages per second), both of which passed. Treat any non-200 status, or a 200 page with no post id, as a possible block: log it and stop fetching detail pages for the rest of that Search instead of retrying. With the JSON API, detail pages are only needed for extra attributes (VIN, fuel, transmission), since post id and mileage come with the search results.
 
 ## 3. Image hotlinking
 
@@ -82,4 +86,4 @@ Not tested: what an image URL returns after its listing is deleted.
 
 - #3: pairing the static list with JSON-LD by position is wrong whenever a listing has no photos, and the static list is incomplete. Follow-up #11 covers reading results from the JSON API instead.
 - #4: post id and mileage are in the API results, so detail pages are only needed for the other attributes. Use the pacing above.
-- #9: hotlinking works, so the page does not need to download images.
+- #9: hotlinking works, so the Search page does not need to download images.
