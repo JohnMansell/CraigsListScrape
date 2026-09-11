@@ -2,9 +2,7 @@ import argparse
 
 from loguru import logger
 
-from craigslist.log import configure_logging
-
-LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR"]
+from craigslist.log import LOG_LEVELS, configure_logging
 
 
 def main(argv: list[str] | None = None) -> None:

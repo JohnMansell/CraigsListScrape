@@ -5,6 +5,7 @@ from pathlib import Path
 from loguru import logger
 
 LOG_FILENAME = "craigslist.log"
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 DEFAULT_LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 
