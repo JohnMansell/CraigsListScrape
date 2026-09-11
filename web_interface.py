@@ -1,82 +1,123 @@
 
-# --- Modules
-import requests
-import pandas as pd
-from bs4 import BeautifulSoup
+# --- Selenium
+from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.wait import WebDriverWait
+
+import urllib.request
 
 # --- Logging
 from color_logging import *
 logger = get_logger(__name__)
 
-# --- Constants
-HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'}
+
+# -------------------------------------------------------
+#               Initialize Web Driver
+# -------------------------------------------------------
 
 
-def url_request(url):
-    try:
-        page = requests.get(url, headers=HEADERS)
-    except Exception as e:
-        logger.error(e)
+class Web_Interface:
+    def __init__(self):
+        WINDOW_SIZE = "1920,1080"
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--window-size=%s" % WINDOW_SIZE)
 
-    if page.status_code != 200:
-        logger.error(f"{page.status_code=}. {page.reason=}. {url=}")
+        # Selenium Manager locates (or downloads) Chrome and chromedriver
+        self.driver = webdriver.Chrome(options=chrome_options)
 
-    return page
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            logger.exception(exc_val)
+
+        self.driver.quit()
+
+    def get_all_listings(self, url):
+        self.driver.get(url)
+        car_elems = WebDriverWait(self.driver, timeout=10).until(
+            lambda d: d.find_elements(By.CLASS_NAME, "gallery-card"))
+
+        return car_elems
+
+    def get_car_attributes(self, url):
+
+        original_page = self.driver.current_window_handle
+        self.driver.switch_to.new_window('tab')
+        attr_dict = {}
+
+        try:
+            self.driver.get(url)
+            attributes = self.driver.find_elements(By.CLASS_NAME, "attrgroup")
+
+            for attr in attributes:
+                for item in attr.text.split('\n'):
+                    if ":" in item.strip():
+                        key, value = item.split(':')
+                        attr_dict[key] = value
+        except NoSuchElementException as e:
+            logger.error(f"Unable to load attributes for {url}")
+            pass
+
+        finally:
+            self.driver.close()
+            self.driver.switch_to.window(original_page)
+
+        return attr_dict
+
+    @staticmethod
+    def get_car_info(car):
+        try:
+            # --- Objects
+            title_object = car.find_element(By.CLASS_NAME, "posting-title")
+            price_object = car.find_element(By.CLASS_NAME, "priceinfo")
+
+            # --- Convert
+            price = price_object.text
+            price = price.replace(',', '').replace('$', '')
+            price = int(price)
+
+            title = title_object.text
+            url = title_object.get_attribute('href')
+
+            # --- Numeric posting id is on the parent search-result div; urls no longer contain it
+            id = car.find_element(By.XPATH, '..').get_attribute('data-pid') or url.rstrip('/').split('/')[-1]
+
+            return price, title, url, id
+
+        except NoSuchElementException as e:
+            logger.error(f"NoSuchElementException")
+            return 0, "", None, None
+
+    def get_car_image(self, car):
+
+        actions = ActionChains(self.driver)
+
+        img = car.find_element(By.TAG_NAME, 'img')
+        url = img.get_attribute("src")
+
+        if not url:
+            actions.move_to_element(car).perform()
+            url = img.get_attribute("src")
+
+        if not url:
+            logger.error(f"{car} has no img src")
+            return "placeholder.png"
+
+        name = str(url.split('/')[-1])
+
+        img_path = f'assets/car_images/{name}'
+
+        logger.debug(f"Downloading Image {url}")
+        if not os.path.exists(img_path):
+            filename, headers = urllib.request.urlretrieve(url, img_path)
+            logger.debug(f"{filename=}")
+            logger.debug(f"{headers=}")
+        return name
 
 
-def get_cities_from_web():
-    # --- Get geo site list
-    URL = 'https://geo.craigslist.org/iso/us'
-    page = url_request(URL)
-    soup = BeautifulSoup(page.content, 'html.parser')
-
-    href_list = list()
-    cities_list = list()
-    states_list = list()
-
-    # --- Parse Cities
-    for ultag in soup.find_all('ul', {'class': 'height6 geo-site-list'}):
-        for litag in ultag.find_all('li'):
-
-            text = litag.text
-            try:
-                city, state = text.split(',')
-            except:
-                print("-------------")
-                print(text)
-                city = input("City :: ")
-                state = input("State :: ")
-
-                if len(city) == 0:
-                    city = text.title()
-
-            href_list.append(litag.a.get('href'))
-            cities_list.append(city.title())
-            states_list.append(state)
-
-    # --- Data Frame
-    return pd.DataFrame({'href': href_list,
-                         'city': cities_list,
-                         'state': states_list})
-
-
-def get_car_elems(URL):
-    logger.debug(f"Get car elements from {URL}")
-    page = url_request(URL)
-    if not page:
-        return list()
-
-    soup = BeautifulSoup(page.content, 'html.parser')
-    results = soup.find(class_='rows')
-    car_elems = results.find_all('li', class_='result-row') if results else list()
-
-    return car_elems
-
-
-def get_car_attributes(url):
-    logger.debug(f"Getting car attributes {url=}")
-    car_page = url_request(url)
-    car_soup = BeautifulSoup(car_page.content, 'html.parser')
-    attributes = car_soup.find_all('p', class_='attrgroup')
-
-    return attributes

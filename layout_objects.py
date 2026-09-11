@@ -3,13 +3,15 @@ from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
 
-from backend import *
+from backend import Backend
 
-# # --- Initialize Functions
-get_locations()
-states = get_states()
-cities = get_cities('AZ')
-make_options = get_make_options()
+BACKEND = Backend()
+
+# --- Initialize Functions
+locations = BACKEND.get_locations()
+states = BACKEND.get_states()
+cities = BACKEND.get_cities('CA')
+make_options = BACKEND.get_make_options()
 
 colors = {
     'background': '#111111',
