@@ -55,7 +55,7 @@ Checked against live detail pages:
 | Image URL | drop the `3:`, append `_600x450.jpg` (also `_300x300.jpg`, `_50x50c.jpg`) | all three sizes returned 200 `image/jpeg` |
 | Geo | lat and lon in the `n:m~lat~lon` string | matched the JSON-LD geo for the same listing |
 
-Not checked: `postedOffset + minPostedDate` for the newest listing equals `maxPostedTs`, so it is most likely the posted Unix time. Field 145, the `n:m` prefix of the geo string, and the other `batch=` numbers are unexplained. Layouts vary, so read fields by tag and from the ends of the list, not by fixed position:
+`postedOffset + minPostedDate` is the posted Unix time, and field 145 and the `n:m` geo prefix are both decoded in section 4. The other `batch=` numbers are still unexplained, and the strings are not free-form: invented values give 400. Layouts vary, so read fields by tag and from the ends of the list, not by fixed position:
 
 - `full` items (22 of 360 differ): with no photos, `imageSuffix` is `0` and tag 4 is missing (8 items); an extra negative integer such as `-6` can follow `imageSuffix` (14 items). The title is always the last element.
 - `batch` items: the image list is always third but can be empty (27 of 1080).
@@ -82,8 +82,66 @@ About 30 more requests (search pages, API calls, detail spot checks) went out in
 
 Not tested: what an image URL returns after its listing is deleted.
 
+## 4. Decoding the API (2026-09-11, grilling session on #11)
+
+Checked live from one IP, mostly against `cat=cta&auto_make_model=honda civic&searchPath=area/orangecounty`.
+
+### `purveyor`
+
+| Value | Result |
+| --- | --- |
+| `purveyor=owner` | owner listings only |
+| `purveyor=dealer` | dealer listings only |
+| omitted | both, merged |
+| `purveyor=all` | identical to omitting it |
+| passed twice | the first value wins, silently |
+
+### Field 145 is the purveyor code
+
+Index 2 of a `full` item is **145 for owner, 146 for dealer**. Confirmed on Los Angeles, SF Bay, and Orange County, filtered and unfiltered. A merged response carries both values mixed (Orange County: 159 owner, 201 dealer).
+
+`batch` items have no purveyor code: the only bare integer in one is the post id offset. So results past 360 cannot be labelled and a merged request cannot be sorted afterwards. Run one search per owner type instead.
+
+### The geo prefix
+
+In `"n:m~lat~lon"`, `n` indexes `data.decode.locations` and `m` indexes `data.decode.locationDescriptions`.
+
+- `locations` entries are `[siteId, citySlug]` or `[siteId, citySlug, subareaSlug]`, for example `[103, "orangecounty"]` and `[7, "losangeles", "sfv"]`.
+- `locationDescriptions` is the seller-typed location text, typos included: "Highgrove", "West Covina", "foutain valley". Correct on 6 of 6 checked.
+
+`batch` items have no geo at all, so location is knowable for the first 360 results only.
+
+### `totalResultCount` counts local results only
+
+Orange County / honda civic / dealer reports `totalResultCount` 15 but returns 60 distinct post ids, 59 of whose titles contain "Civic". The 15 are exactly the results located in `orangecounty`; the other 45 are syndicated from elsewhere:
+
+| Location | Results |
+| --- | --- |
+| orangecounty | 15 |
+| losangeles (6 subareas) | 27 |
+| inlandempire | 13 |
+| sandiego/nsd | 2 |
+| modesto | 2 |
+| phoenix/cph | 1 |
+
+The merged response returned exactly those 15 dealer items, set for set. Owner searches showed no such bleed: 31 of 31 local here, and 360 of 360 within Los Angeles subareas on LA all-cars.
+
+**So `totalResultCount` cannot drive paging.** Page until a batch comes back short or empty. On dealer searches, a tally above the reported total is normal, not drift.
+
+No server-side fix was found. `search_distance=25&postal=92868` returned *more* out-of-area results (74) and moved the total to 74; `searchDistance` gave `total=1`; `vicinity=0` changed nothing; `searchPath=orangecounty` without the `area/` prefix returns no `decode` block.
+
+### Other confirmations
+
+- Post id: `data.decode.minPostingId + postIdOffset` in `full`, `data.minPostingId + postIdOffset` in `batch`.
+- Price: the bare integer at index 3 of a `full` item matched tag 10 on 31 of 31 results.
+- Posted time: `postedOffset + data.decode.minPostedDate` resolved to a plausible current timestamp, so it is the posted Unix time.
+- Images: 4 to 23 codes per listing, and a code can repeat within one listing.
+- Unfiltered dealer totals are large and sane: Los Angeles 4896, SF Bay 12216, Orange County 1949.
+
 ## What this changes for open tickets
 
-- #3: pairing the static list with JSON-LD by position is wrong whenever a listing has no photos, and the static list is incomplete. Follow-up #11 covers reading results from the JSON API instead.
-- #4: post id and mileage are in the API results, so detail pages are only needed for the other attributes. Use the pacing above.
-- #9: hotlinking works, so the Search page does not need to download images.
+- **#3** rewritten around the JSON API, with #11 folded into it and closed: one search per owner type, paging that never trusts `totalResultCount`, no location field, deduplicated image codes, loud failure on a response-shape change, and fixtures-only tests.
+- **#4** rescoped to an on-demand attribute fetch for a single listing, outside the Search path, since post id and mileage now arrive with search results. Use the pacing in section 2.
+- **#7** closed. The cache existed to avoid refetching detail pages, and there are none in the Search path.
+- **#8** now blocked by #3, #5, and #6, with progress reported once per API request.
+- **#9**: hotlinking works, so the Search page does not need to download images. Out-of-area dealer listings appear in every dealer search and are kept deliberately.
