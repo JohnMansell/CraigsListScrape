@@ -38,7 +38,7 @@ Item = list[Any]
 
 
 def tags(item: Item) -> set[int]:
-    return {field[0] for field in item if isinstance(field, list) and field and isinstance(field[0], int)}
+    return set(listings._tagged(item))
 
 
 def image_codes(item: Item) -> list[str]:

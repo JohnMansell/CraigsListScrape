@@ -172,8 +172,17 @@ def test_unparseable_response_raises_an_error_naming_the_api():
 
 
 def test_full_result_from_the_wrong_owner_type_raises():
-    with pytest.raises(ListingSourceError, match="asked for owner"):
+    with pytest.raises(ListingSourceError, match="asked for owner listings, got dealer listings"):
         parse_full(fixture("dealer_full.json"), OwnerType.OWNER)
+
+
+def test_full_result_with_an_unknown_purveyor_code_is_skipped_and_logged(log_messages):
+    text = fixture("owner_full.json").replace("\n    145,\n", "\n    999,\n", 1)
+
+    page = parse_full(text, OwnerType.OWNER)
+
+    assert len(page.listings) == 19
+    assert any("unknown purveyor code" in message for message in log_messages)
 
 
 # Searching
@@ -224,6 +233,20 @@ def test_paging_stops_on_a_short_batch_not_on_the_reported_total(small_pages, lo
     assert results.reported_totals[OwnerType.OWNER] == 1508
     assert [query["batch"].split("-")[1] for query in fetch.queries()] == ["0", "1789758620", "0", "20"]
     assert any("got 27 results, API reported 1508" in message for message in log_messages)
+
+
+def test_paging_continues_past_a_reported_total_below_one_page(small_pages, log_messages):
+    # Like a dealer search, whose total counts only local results.
+    full = fixture("owner_full.json").replace('"totalResultCount": 1508', '"totalResultCount": 5')
+    fetch = paged_owner_fetcher(owner_full=full)
+
+    results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch)
+
+    assert sum(urlsplit(url).path.endswith("/batch") for url in fetch.urls) == 2
+    assert len(results.listings) == len(
+        search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), paged_owner_fetcher()).listings
+    )
+    assert any("got 27 results, API reported 5" in message for message in log_messages)
 
 
 def test_results_beyond_the_reported_total_are_all_returned_and_logged(log_messages):
