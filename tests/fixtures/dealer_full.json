@@ -1,0 +1,1839 @@
+{
+ "apiVersion": 8,
+ "configId": "af13f3599b88d5f3b3766466d915bd80d88d12c149fdf8fed646db2e15c5c701",
+ "configTs": 1789753153,
+ "data": {
+  "areas": {
+   "103": {
+    "areaUnits": "ft",
+    "currency": "USD",
+    "distanceUnits": "mi",
+    "name": "orangecounty"
+   }
+  },
+  "bundleDups": 0,
+  "cacheTs": 1789759159,
+  "canonicalUrl": "//www.craigslist.org/search/area/orangecounty?auto_make_model=honda%20civic&cat=cta&purveyor=dealer",
+  "categoryAbbr": "ctd",
+  "decode": {
+   "locationDescriptions": [
+    0,
+    "** FAST APPROVALS! SE HABLA ESPANOL! **",
+    "BEVERLY HILLS CALIFORNIA",
+    "Orange County",
+    "RIVERSIDE",
+    "Garden Grove",
+    "Brea",
+    "Laguna Hills",
+    "1800.00 down payment",
+    "Laguna Niguel",
+    "la habra, ca",
+    "Los Angeles",
+    "Long Beach",
+    "2100 Hamner Ave.  Norco, CA 92860",
+    "SOUTH EL MONTE",
+    "Jim's Auto Sales",
+    "Bad Credit - No Credit - We Say YES",
+    "as low as $995 Down Payment *oac",
+    "🆗 1st Time Buyers - You're Approved !",
+    "💥 GET APPROVED TODAY!",
+    "💥 WE WORK WITH ALL TYPES OF CREDIT"
+   ],
+   "locations": [
+    0,
+    [
+     103,
+     "orangecounty"
+    ],
+    [
+     7,
+     "losangeles",
+     "sgv"
+    ],
+    [
+     7,
+     "losangeles",
+     "wst"
+    ],
+    [
+     7,
+     "losangeles",
+     "lgb"
+    ],
+    [
+     7,
+     "losangeles",
+     "sfv"
+    ],
+    [
+     7,
+     "losangeles",
+     "ant"
+    ],
+    [
+     7,
+     "losangeles",
+     "lac"
+    ],
+    [
+     104,
+     "inlandempire"
+    ],
+    [
+     18,
+     "phoenix",
+     "cph"
+    ],
+    [
+     8,
+     "sandiego",
+     "nsd"
+    ]
+   ],
+   "maxPostedDate": 1789752664,
+   "minDate": 1821295159,
+   "minPostedDate": 1787160671,
+   "minPostingId": 7954568271,
+   "neighborhoods": [
+    0
+   ],
+   "version": 2
+  },
+  "detailsOrder": "date",
+  "filterButtons": [
+   {
+    "buttonLabel": "price",
+    "formConfig": {
+     "input_prefix": "$",
+     "is_default_button": 1,
+     "label": "price",
+     "maxVal": {
+      "name": "max_price",
+      "placeholder": "max"
+     },
+     "minVal": {
+      "name": "min_price",
+      "placeholder": "min"
+     },
+     "name": "price",
+     "type": "range",
+     "variant": "customPriceWidget"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "by dealer",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "sold by",
+     "name": "purveyor",
+     "options": [
+      {
+       "label": "all",
+       "value": "all"
+      },
+      {
+       "label": "owner",
+       "value": "owner"
+      },
+      {
+       "label": "dealer",
+       "value": "dealer"
+      }
+     ],
+     "type": "select",
+     "variant": "radio"
+    },
+    "isSet": 1
+   },
+   {
+    "buttonLabel": "type",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "type",
+     "name": "auto_bodytype",
+     "options": [
+      {
+       "label": "bus",
+       "value": 1
+      },
+      {
+       "label": "convertible",
+       "value": 2
+      },
+      {
+       "label": "coupe",
+       "value": 3
+      },
+      {
+       "label": "hatchback",
+       "value": 4
+      },
+      {
+       "label": "minivan",
+       "value": 5
+      },
+      {
+       "label": "offroad",
+       "value": 6
+      },
+      {
+       "label": "pickup",
+       "value": 7
+      },
+      {
+       "label": "sedan",
+       "value": 8
+      },
+      {
+       "label": "truck",
+       "value": 9
+      },
+      {
+       "label": "SUV",
+       "value": 10
+      },
+      {
+       "label": "wagon",
+       "value": 11
+      },
+      {
+       "label": "van",
+       "value": 12
+      },
+      {
+       "label": "other",
+       "value": 13
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "model year",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "model year",
+     "maxVal": {
+      "name": "max_auto_year",
+      "placeholder": "max"
+     },
+     "minVal": {
+      "name": "min_auto_year",
+      "placeholder": "min"
+     },
+     "name": "auto_year",
+     "type": "range"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "fuel",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "fuel",
+     "name": "auto_fuel_type",
+     "options": [
+      {
+       "label": "gas",
+       "value": 1
+      },
+      {
+       "label": "diesel",
+       "value": 2
+      },
+      {
+       "label": "hybrid",
+       "value": 3
+      },
+      {
+       "label": "electric",
+       "value": 4
+      },
+      {
+       "label": "other",
+       "value": 6
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "condition",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "condition",
+     "name": "condition",
+     "options": [
+      {
+       "label": "new",
+       "value": "10"
+      },
+      {
+       "label": "like new",
+       "value": "20"
+      },
+      {
+       "label": "excellent",
+       "value": "30"
+      },
+      {
+       "label": "good",
+       "value": "40"
+      },
+      {
+       "label": "fair",
+       "value": "50"
+      },
+      {
+       "label": "salvage",
+       "value": "60"
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "honda civic",
+    "formConfig": {
+     "autocomplete": "makemodel",
+     "label": "make and model",
+     "name": "auto_make_model",
+     "type": "text"
+    },
+    "isSet": 1
+   }
+  ],
+  "filters": [
+   {
+    "autocomplete": "search",
+    "label": "query",
+    "name": "query",
+    "type": "text"
+   },
+   {
+    "name": "vicinity",
+    "type": "hidden"
+   },
+   {
+    "label": "sort by",
+    "name": "sort",
+    "options": [
+     {
+      "label": "newest",
+      "value": "date"
+     },
+     {
+      "label": "oldest",
+      "value": "dateoldest"
+     },
+     {
+      "label": "﹩→ $$$",
+      "value": "priceasc"
+     },
+     {
+      "label": "$$$ → ﹩",
+      "value": "pricedsc"
+     },
+     {
+      "label": "distance",
+      "value": "dist"
+     }
+    ],
+    "type": "select",
+    "value": "date"
+   },
+   {
+    "input_prefix": "$",
+    "label": "price",
+    "maxVal": {
+     "name": "max_price",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_price",
+     "placeholder": "min"
+    },
+    "name": "price",
+    "type": "range",
+    "variant": "customPriceWidget"
+   },
+   {
+    "input_prefix": "$",
+    "label": "monthly payment",
+    "maxVal": {
+     "name": "max_monthly_payment",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_monthly_payment",
+     "placeholder": "min"
+    },
+    "name": "monthly_payment",
+    "type": "range"
+   },
+   {
+    "label": "sold by",
+    "name": "purveyor",
+    "options": [
+     {
+      "label": "all",
+      "value": "all"
+     },
+     {
+      "label": "owner",
+      "value": "owner"
+     },
+     {
+      "label": "dealer",
+      "value": "dealer"
+     }
+    ],
+    "type": "select"
+   },
+   {
+    "autocomplete": "makemodel",
+    "label": "make and model",
+    "name": "auto_make_model",
+    "type": "text",
+    "variant": "text"
+   },
+   {
+    "label": "model year",
+    "maxVal": {
+     "name": "max_auto_year",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_auto_year",
+     "placeholder": "min"
+    },
+    "name": "auto_year",
+    "type": "range",
+    "variant": "yearRange"
+   },
+   {
+    "label": "odometer",
+    "maxVal": {
+     "name": "max_auto_miles",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_auto_miles",
+     "placeholder": "min"
+    },
+    "name": "auto_miles",
+    "type": "range"
+   },
+   {
+    "label": "drive",
+    "name": "auto_drivetrain",
+    "options": [
+     {
+      "label": "fwd",
+      "value": 1
+     },
+     {
+      "label": "rwd",
+      "value": 2
+     },
+     {
+      "label": "4wd",
+      "value": 3
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "transmission",
+    "name": "auto_transmission",
+    "options": [
+     {
+      "label": "manual",
+      "value": 1
+     },
+     {
+      "label": "automatic",
+      "value": 2
+     },
+     {
+      "label": "other",
+      "value": 3
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "type",
+    "name": "auto_bodytype",
+    "options": [
+     {
+      "label": "bus",
+      "value": 1
+     },
+     {
+      "label": "convertible",
+      "value": 2
+     },
+     {
+      "label": "coupe",
+      "value": 3
+     },
+     {
+      "label": "hatchback",
+      "value": 4
+     },
+     {
+      "label": "minivan",
+      "value": 5
+     },
+     {
+      "label": "offroad",
+      "value": 6
+     },
+     {
+      "label": "pickup",
+      "value": 7
+     },
+     {
+      "label": "sedan",
+      "value": 8
+     },
+     {
+      "label": "truck",
+      "value": 9
+     },
+     {
+      "label": "SUV",
+      "value": 10
+     },
+     {
+      "label": "wagon",
+      "value": 11
+     },
+     {
+      "label": "van",
+      "value": 12
+     },
+     {
+      "label": "other",
+      "value": 13
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "cylinders",
+    "name": "auto_cylinders",
+    "options": [
+     {
+      "label": "3 cylinders",
+      "value": 1
+     },
+     {
+      "label": "4 cylinders",
+      "value": 2
+     },
+     {
+      "label": "5 cylinders",
+      "value": 3
+     },
+     {
+      "label": "6 cylinders",
+      "value": 4
+     },
+     {
+      "label": "8 cylinders",
+      "value": 5
+     },
+     {
+      "label": "10 cylinders",
+      "value": 6
+     },
+     {
+      "label": "12 cylinders",
+      "value": 7
+     },
+     {
+      "label": "other",
+      "value": 8
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "paint color",
+    "name": "auto_paint",
+    "options": [
+     {
+      "label": "black",
+      "value": 1
+     },
+     {
+      "label": "blue",
+      "value": 2
+     },
+     {
+      "label": "brown",
+      "value": 20
+     },
+     {
+      "label": "green",
+      "value": 3
+     },
+     {
+      "label": "grey",
+      "value": 4
+     },
+     {
+      "label": "orange",
+      "value": 5
+     },
+     {
+      "label": "purple",
+      "value": 6
+     },
+     {
+      "label": "red",
+      "value": 7
+     },
+     {
+      "label": "silver",
+      "value": 8
+     },
+     {
+      "label": "white",
+      "value": 9
+     },
+     {
+      "label": "yellow",
+      "value": 10
+     },
+     {
+      "label": "custom",
+      "value": 11
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "fuel",
+    "name": "auto_fuel_type",
+    "options": [
+     {
+      "label": "gas",
+      "value": 1
+     },
+     {
+      "label": "diesel",
+      "value": 2
+     },
+     {
+      "label": "hybrid",
+      "value": 3
+     },
+     {
+      "label": "electric",
+      "value": 4
+     },
+     {
+      "label": "other",
+      "value": 6
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "condition",
+    "name": "condition",
+    "options": [
+     {
+      "label": "new",
+      "value": 10
+     },
+     {
+      "label": "like new",
+      "value": 20
+     },
+     {
+      "label": "excellent",
+      "value": 30
+     },
+     {
+      "label": "good",
+      "value": 40
+     },
+     {
+      "label": "fair",
+      "value": 50
+     },
+     {
+      "label": "salvage",
+      "value": 60
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "title status",
+    "name": "auto_title_status",
+    "options": [
+     {
+      "label": "clean",
+      "value": 1
+     },
+     {
+      "label": "salvage",
+      "value": 2
+     },
+     {
+      "label": "rebuilt",
+      "value": 3
+     },
+     {
+      "label": "parts only",
+      "value": 4
+     },
+     {
+      "label": "lien",
+      "value": 5
+     },
+     {
+      "label": "missing",
+      "value": 6
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "form": [
+     {
+      "label": "search titles only",
+      "name": "srchType",
+      "type": "boolean",
+      "value": "T"
+     },
+     {
+      "label": "has image",
+      "name": "hasPic",
+      "type": "boolean",
+      "value": 1
+     },
+     {
+      "label": "posted today",
+      "name": "postedToday",
+      "type": "boolean",
+      "value": 1
+     },
+     {
+      "label": "hide duplicates",
+      "name": "bundleDuplicates",
+      "type": "boolean",
+      "value": 1
+     }
+    ],
+    "name": "basic bools",
+    "type": "group"
+   },
+   {
+    "form": [
+     {
+      "label": "delivery available",
+      "name": "delivery_available",
+      "type": "boolean",
+      "value": 1,
+      "variant": "checkbox"
+     },
+     {
+      "label": "cryptocurrency ok",
+      "name": "crypto_currency_ok",
+      "type": "boolean",
+      "value": 1,
+      "variant": "checkbox"
+     }
+    ],
+    "name": "delivery_available",
+    "type": "group"
+   },
+   {
+    "label": "language of posting",
+    "name": "language",
+    "options": [
+     {
+      "label": "afrikaans",
+      "value": 1
+     },
+     {
+      "label": "català",
+      "value": 2
+     },
+     {
+      "label": "dansk",
+      "value": 3
+     },
+     {
+      "label": "deutsch",
+      "value": 4
+     },
+     {
+      "label": "english",
+      "value": 5
+     },
+     {
+      "label": "español",
+      "value": 6
+     },
+     {
+      "label": "suomi",
+      "value": 7
+     },
+     {
+      "label": "français",
+      "value": 8
+     },
+     {
+      "label": "italiano",
+      "value": 9
+     },
+     {
+      "label": "nederlands",
+      "value": 10
+     },
+     {
+      "label": "norsk",
+      "value": 11
+     },
+     {
+      "label": "português",
+      "value": 12
+     },
+     {
+      "label": "svenska",
+      "value": 13
+     },
+     {
+      "label": "filipino",
+      "value": 14
+     },
+     {
+      "label": "türkçe",
+      "value": 15
+     },
+     {
+      "label": "中文",
+      "value": 16
+     },
+     {
+      "label": "العربية",
+      "value": 17
+     },
+     {
+      "label": "日本語",
+      "value": 18
+     },
+     {
+      "label": "한국말",
+      "value": 19
+     },
+     {
+      "label": "русский",
+      "value": 20
+     },
+     {
+      "label": "tiếng việt",
+      "value": 21
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   }
+  ],
+  "firstNearbyResultId": 7960969224,
+  "hubLinks": [
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=suvs",
+    "linkText": "SUVs",
+    "name": "suvs",
+    "title": "SUVs for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=classic-cars",
+    "linkText": "classic cars",
+    "name": "classic-cars",
+    "title": "classic cars for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=electric-cars",
+    "linkText": "electric cars",
+    "name": "electric-cars",
+    "title": "electric cars for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=pickups-trucks",
+    "linkText": "pickups-trucks",
+    "name": "pickups-trucks",
+    "title": "pickups and trucks for sale"
+   }
+  ],
+  "humanReadableParams": [
+   {
+    "key": "purveyor",
+    "value": "for sale by dealer"
+   },
+   {
+    "key": "auto_make_model",
+    "name": "make and model",
+    "value": "honda civic"
+   },
+   {
+    "key": "sort",
+    "name": "sort",
+    "value": "newest"
+   }
+  ],
+  "items": [
+   [
+    13867413,
+    2533909,
+    146,
+    13995,
+    "1:1~34.1209~-117.2592",
+    "0cU09G",
+    [
+     13,
+     "Ksyyav-y8RGIueFbb7K_ZQ"
+    ],
+    [
+     4,
+     "3:00X0X_587n7VAqRaL_0cU09G",
+     "3:00M0M_6lyiNvBaE0n_0cU09G",
+     "3:00O0O_i8JOztam2BZ_0cU09G",
+     "3:00R0R_dbQ1CqIHVjb_0cU09G",
+     "3:00q0q_NlNCO0Hg6h_0cU09G",
+     "3:00U0U_hlCxmnxuW4q_0cU09G",
+     "3:01212_lii6kCjFoTX_0cU09G",
+     "3:00A0A_l1bmrR3cHY9_0cU09G",
+     "3:00e0e_casTWOB1IGR_0cU09G",
+     "3:00r0r_ehYzXnjhg4W_0cU09G",
+     "3:00z0z_aGBr3NoKK29_0cU09G",
+     "3:00303_cqry7GBBfp_0cU09G",
+     "3:01717_4bQuSsj90KB_0cU09G",
+     "3:00t0t_fDxf8DJOqB6_0cU09G",
+     "3:00l0l_k2kFpGeH90K_0cU09G",
+     "3:00S0S_8XAG1R9iDY4_0cU09G",
+     "3:00T0T_kgjo2Z9Cx6O_0cU09G"
+    ],
+    [
+     6,
+     "san-bernardino-2017-honda-civic-ex"
+    ],
+    [
+     9,
+     165849
+    ],
+    [
+     10,
+     "$13,995"
+    ],
+    "2017 Honda Civic EX Sedan 4D * CLEAN CARS - CASH PRICE *"
+   ],
+   [
+    13699707,
+    2514670,
+    146,
+    7500,
+    "1:2~33.7743~-117.8435",
+    "0pO0jm",
+    [
+     13,
+     "e5SjCaLRiveqUmjnyjoCc3"
+    ],
+    [
+     4,
+     "3:00n0n_34j0ptYkQif_0pO0jm",
+     "3:00I0I_47nrFkK3Mnv_0pO0jm",
+     "3:00Z0Z_kwv1hrkl6Km_0pO0jm",
+     "3:00606_j1oMJiYQITt_0pO0jm",
+     "3:00505_4zfLYvCheiQ_0pO0jm",
+     "3:00F0F_7NhMP9X9qrD_0pO0jm",
+     "3:01212_96EHprNTV86_0pO0jm",
+     "3:00i0i_h6Sy0qHaa7Y_0pO0jm",
+     "3:00E0E_kSrGL26aA6m_0pO0jm",
+     "3:00m0m_8zUVnmcfNlM_0pO0jm",
+     "3:00q0q_1aZeSkNJoQ5_0pO0jm",
+     "3:00T0T_gelc7270UZJ_0pO0jm",
+     "3:00V0V_7B5U2ldhzcK_0pO0jm",
+     "3:00D0D_1BjDVteyHLz_0jm0pO",
+     "3:01313_8LLvs8GHGrK_0pO0jm",
+     "3:00G0G_jYVfjXAuHEu_0pO0jm",
+     "3:00k0k_5yRwnwFLN3q_0pO0jm",
+     "3:00z0z_iErg5KWlIXL_0pO0jm",
+     "3:00M0M_guUVbZIsMbV_0pO0jm"
+    ],
+    [
+     6,
+     "orange-2016-honda-civic-ex-sedan-one"
+    ],
+    [
+     9,
+     184782
+    ],
+    [
+     10,
+     "$7,500"
+    ],
+    "2016 HONDA CIVIC EX SEDAN ONE OWNER CALIFORNIA CAR"
+   ],
+   [
+    13549851,
+    2502602,
+    146,
+    4750,
+    "1:3~33.8841~-117.7304",
+    "0CI0t2",
+    [
+     13,
+     "sFToPtQmxRD1AhSWDL7tZ8"
+    ],
+    [
+     4,
+     "3:00l0l_47eAIVGYUXW_0CI0t2",
+     "3:00Z0Z_7rvc4nVbYT_0CI0t2",
+     "3:00707_jffEFLHR6T4_0CI0t2",
+     "3:00U0U_6lGxzgfn2Zb_0CI0t2",
+     "3:00505_gxwPPV22vgI_0CI0t2",
+     "3:00C0C_lYcepRBB7gJ_0CI0t2",
+     "3:01111_1eoFyfp5GMv_0CI0t2",
+     "3:00n0n_kkXT3bnSiU1_0CI0t2",
+     "3:00X0X_8itPOASMpW5_0CI0t2",
+     "3:00H0H_9QkzD5DJ7gt_0CI0t2",
+     "3:00z0z_j5zO3oEyXBk_0CI0t2",
+     "3:00P0P_iX0h6rK6N8S_0CI0t2",
+     "3:00M0M_dyuO69FI55B_0CI0t2",
+     "3:00h0h_dVgLjx9HuGU_0CI0t2",
+     "3:00505_do9PEWLN8rn_0CI0t2",
+     "3:00Z0Z_aychDSF0gWA_0CI0t2"
+    ],
+    [
+     6,
+     "yorba-linda-2008-honda-civic-lx-clean"
+    ],
+    [
+     9,
+     200950
+    ],
+    [
+     10,
+     "$4,750"
+    ],
+    "2008 Honda Civic LX Clean title Passed Smog 4-CYLINDERS GAS SAVER"
+   ],
+   [
+    13257882,
+    2444946,
+    146,
+    4750,
+    "1:3~33.8841~-117.7304",
+    "0CI0t2",
+    [
+     13,
+     "4oDUq7GnPYaoagGaF9zyBg"
+    ],
+    [
+     4,
+     "3:01414_cC0bJORFymX_0CI0t2",
+     "3:00n0n_967KTfVKM3n_0CI0t2",
+     "3:00404_jyq6AhCSz1n_0CI0t2",
+     "3:00606_1wHSkqVgL1C_0CI0t2",
+     "3:00b0b_927OZRP8yQL_0CI0t2",
+     "3:00f0f_7QuTW3Z0587_0CI0t2",
+     "3:00000_lnL0AOBfDW4_0CI0t2",
+     "3:00T0T_3VwPKA6SV5k_0CI0t2",
+     "3:00404_l4VWgFYPVRT_0CI0t2",
+     "3:00P0P_iimiaLtOsTF_0CI0t2",
+     "3:00j0j_kz50PWF0s2A_0CI0t2",
+     "3:00808_kfITf5G1Ap_0CI0t2",
+     "3:00q0q_hxKnHYZj1dK_0CI0t2",
+     "3:01212_a2l8Yoz9P7w_0CI0t2",
+     "3:00A0A_iysoRJJzgdX_0CI0t2",
+     "3:01313_1fFR17t7AWI_0CI0t2",
+     "3:00J0J_bImk7KUGjpX_0CI0t2",
+     "3:01212_k6t0kKpoKrD_0CI0t2",
+     "3:00y0y_lxKCaXHqQPt_0CI0t2"
+    ],
+    [
+     6,
+     "yorba-linda-2002-honda-civic-lx-coupe"
+    ],
+    [
+     9,
+     180950
+    ],
+    [
+     10,
+     "$4,750"
+    ],
+    "2002 Honda Civic LX Coupe 4-CYLINDERS RUNS GREAT GAS SAVER!"
+   ],
+   [
+    13059918,
+    2424837,
+    146,
+    13800,
+    "1:4~33.9228~-117.4867",
+    "0uY0hq",
+    [
+     13,
+     "eEwNfiF4BAZ8eTcLKXDsgL"
+    ],
+    [
+     4,
+     "3:00z0z_lSOlBRW6mhY_0uY0hq",
+     "3:00o0o_lTBl0WAJBgW_0uY0hq",
+     "3:00z0z_4ULs74KiPwo_0uY0hq",
+     "3:00l0l_hcRakk191Ji_0uY0hq",
+     "3:00i0i_5BYOU1aDei5_0uY0hq",
+     "3:01414_29JgLBaQKyZ_0uY0hq",
+     "3:00H0H_8VybfSVryKp_0uY0hq",
+     "3:00R0R_7EMNYvX3ejn_0uY0hq",
+     "3:00U0U_97X6Y6oDluG_0CI0lM",
+     "3:00V0V_cC2ZiB1sMeq_0CI0lM",
+     "3:00r0r_3SMUshBGTqh_0CI0lM",
+     "3:00f0f_33MQLvpR0uo_0CI0lM",
+     "3:00u0u_3TPn8tRhxjK_0CI0lM"
+    ],
+    [
+     6,
+     "riverside-2017-honda-civic-lx-sk"
+    ],
+    [
+     9,
+     133255
+    ],
+    [
+     10,
+     "$13,800"
+    ],
+    "2017 HONDA CIVIC LX. SK# 223421."
+   ],
+   [
+    10824450,
+    2082854,
+    146,
+    13995,
+    "1:5~33.7897~-118.179",
+    "0oM0oM",
+    [
+     13,
+     "2LFaOeWu8RGL1s3Kjkln2A"
+    ],
+    [
+     4,
+     "3:00Q0Q_9kZwU1Hf3Mc_0oM0oM",
+     "3:00o0o_6y8umVn3RHA_0x20oM",
+     "3:00K0K_liFp16KryWh_0x20oM",
+     "3:00c0c_2WrFzW2a5rx_0iA0oM",
+     "3:01616_8a9PIcystxY_0x20oM",
+     "3:00K0K_aG0KV3S7u8D_0x20oM",
+     "3:00M0M_7sPMzvlV2uS_0x20oM",
+     "3:00303_diXeHpLZmGg_0x20oM",
+     "3:00m0m_gRFAgqS43da_0x20oM",
+     "3:01616_29eDKQuADWm_0iA0oM",
+     "3:00O0O_eKEn22grjKB_0x20oM",
+     "3:00H0H_3D21PVZ9EMb_0x20oM",
+     "3:01414_cd98Ap69PTo_0x20oM",
+     "3:00M0M_hUF0gH6xEuV_0x20oM",
+     "3:00O0O_7nh4JQOIZba_0x20oM",
+     "3:00u0u_43CVPcgcImA_0x20oM",
+     "3:00h0h_eImE62sMAeh_0x20oM",
+     "3:00i0i_bA73S5H3n9c_0x20oM",
+     "3:00Q0Q_bV1fFdwtdZj_0x20oM",
+     "3:00P0P_4iOh6Pcnvwx_0iA0oM",
+     "3:00F0F_1H6p84XZkhz_0x20oM",
+     "3:00909_b6DWKir5uxP_0x20oM",
+     "3:00U0U_2i4YsnBQFyJ_0iA0oM",
+     "3:00j0j_k4I7PGVOKI6_0x20oM"
+    ],
+    [
+     6,
+     "signal-hill-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     117495
+    ],
+    [
+     10,
+     "$13,995"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    10808475,
+    2081144,
+    146,
+    5998,
+    "1:6~33.9291~-117.8845",
+    "0CI0t2",
+    -1,
+    [
+     13,
+     "p4is58xEpDzZkZG9vtCzJN"
+    ],
+    [
+     4,
+     "3:00F0F_1FdZXAFt1Xp_0CI0t2",
+     "3:00909_hR4lLbc761g_0CI0t2",
+     "3:00i0i_i0q7yWkpND7_0CI0t2",
+     "3:00a0a_arDsyrzhFHv_0CI0t2",
+     "3:00A0A_h6QJemqzGO0_0CI0t2",
+     "3:00n0n_ctWc21fTdT0_0CI0t2",
+     "3:00z0z_3gq2bAkbqQ6_0CI0t2",
+     "3:00202_obmaXAZPlo_0CI0t2",
+     "3:00B0B_8OpbuaXTFaE_0CI0t2",
+     "3:00000_lfFCaMfQUXw_0CI0t2",
+     "3:00A0A_4Y6POPv4tK1_0CI0t2",
+     "3:00r0r_5j4KNHCcf99_0CI0t2",
+     "3:01717_fBfCrTjhkoX_0CI0t2",
+     "3:01010_8QT0i6XUJeC_0CI0t2",
+     "3:00X0X_llrHt0GAsBv_0CI0t2",
+     "3:00T0T_7ndkCMr8Gx3_0CI0t2",
+     "3:00Q0Q_9C8sNn4Z2u2_0CI0t2",
+     "3:00o0o_5IddAv79td8_0CI0t2",
+     "3:00M0M_uRTmYA4Dwr_0CI0t2"
+    ],
+    [
+     6,
+     "brea-2011-honda-civic-ex-clean-title"
+    ],
+    [
+     9,
+     133500
+    ],
+    [
+     10,
+     "$5,998"
+    ],
+    "2011 HONDA CIVIC EX-L Clean Title Low Miles"
+   ],
+   [
+    6401058,
+    1402500,
+    146,
+    17900,
+    "1:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "sk-uJrWo8RGvZKIKp7P6EA"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    6249945,
+    1388186,
+    146,
+    19800,
+    "1:7~33.625~-117.725",
+    "0jm0aT",
+    [
+     13,
+     "nIzA0pOo8RGN7aohiB9tGw"
+    ],
+    [
+     4,
+     "3:00S0S_5Kro4gfxx0F_0jm0aT",
+     "3:00W0W_lju72IldUST_0jm0aT",
+     "3:00T0T_aFefxcLVMgB_0jm0aT",
+     "3:00W0W_12EDSuxEq6L_0jm0aT",
+     "3:00J0J_lCKMf9hZvfa_0jm0aT",
+     "3:00X0X_hh4sG6EMwYA_0jm0aT",
+     "3:00G0G_fqzXk4YXezh_0jm0aT",
+     "3:00r0r_8wFSDCZsFN5_0jm0aT",
+     "3:00L0L_31gFyMtcbhg_0jm0aT",
+     "3:00R0R_iSdkXKa9QWR_0jm0aT",
+     "3:00B0B_33J0k1P8lzS_0jm0aT",
+     "3:00p0p_dFx1Xw0Ozbt_0jm0aT",
+     "3:00909_9DtZwNUmnDY_0jm0aT",
+     "3:00F0F_c3EfEHfcqgl_0jm0aT",
+     "3:00505_g7FKC163Bgk_0jm0aT",
+     "3:00f0f_eyWOFfRYctK_0jm0aT",
+     "3:00P0P_iruky3rwnv2_0jm0aT",
+     "3:00R0R_8jOryNz9yuJ_0jm0aT",
+     "3:00M0M_a5Fv0WDIVp5_0jm0aT",
+     "3:01515_8kzPZWu35Bi_0jm0aT",
+     "3:00Z0Z_5S8hY4X3MOe_0jm0aT",
+     "3:00t0t_2zZKm17PfRx_0jm0aT",
+     "3:00L0L_eDmJtnpPhW_0jm0aT"
+    ],
+    [
+     6,
+     "laguna-woods-2021-honda-civic-financing"
+    ],
+    [
+     9,
+     54071
+    ],
+    [
+     10,
+     "$19,800"
+    ],
+    "2021 Honda Civic - Financing Available!"
+   ],
+   [
+    5887614,
+    1325624,
+    146,
+    12997,
+    "1:0~33.7875~-117.8776",
+    "0cU09G",
+    [
+     13,
+     "rlUDKQKo8RGjGNvtt1ygSA"
+    ],
+    [
+     4,
+     "3:00G0G_2Bo9Hdc6rYH_0cU09G",
+     "3:00k0k_1fWePjKu5zW_0cU09G",
+     "3:00V0V_64VNbaNWcPd_0cU09G",
+     "3:00r0r_jLkl93FEdNx_0cU09G",
+     "3:00z0z_20GavYhID0D_0cU09G",
+     "3:00909_5mvvgH3X9qF_0cU09G",
+     "3:00Q0Q_eqkgrUlNPCY_0cU09G",
+     "3:00e0e_bYHFUkC0J8o_0cU09G",
+     "3:00y0y_gQhuNjMa3Db_0cU09G",
+     "3:01212_jD6bhFY25qY_0cU09G",
+     "3:00L0L_c0FbvAbsHDg_0cU09G",
+     "3:00f0f_hiMuWI3k8wQ_0cU09G",
+     "3:00L0L_hRZwVK6KfSd_0cU09G",
+     "3:00i0i_aUptG6Jo8E8_0cU09G",
+     "3:00505_hhN9a794F2U_0cU09G",
+     "3:00404_fWxNX7gozqt_0cU09G",
+     "3:00k0k_4sEyZ7csv7w_0cU09G",
+     "3:00U0U_i8tthSAI2pC_0cU09G",
+     "3:00u0u_5hx4sxa5zB7_0cU09G",
+     "3:00000_glyEmWuZt7V_0cU09G",
+     "3:00G0G_cmDGPleL8DZ_0cU09G",
+     "3:01111_b6D9UKRmDEc_0cU09G",
+     "3:00Q0Q_8Jk116zZ0A5_0cU09G"
+    ],
+    [
+     6,
+     "orange-2013-honda-civic-lx"
+    ],
+    [
+     9,
+     102980
+    ],
+    [
+     10,
+     "$12,997"
+    ],
+    "2013 Honda Civic LX   "
+   ],
+   [
+    5884980,
+    1325061,
+    146,
+    6800,
+    "1:0~33.6801~-117.9085",
+    "0kj0fd",
+    [
+     13,
+     "46t5LVxyMEVAKdUdcF6BVd"
+    ],
+    [
+     4,
+     "3:00P0P_99Z9aH5oDvU_0kj0fd",
+     "3:00J0J_hmZJQz2J0pP_0bC0fu",
+     "3:00G0G_1t0FyDmwZbW_0m20fY",
+     "3:00808_HVfYNqM00S_0bC0fu",
+     "3:01515_dv3VcAxfDMA_0bC0fu",
+     "3:00A0A_ctxwHjbayCU_0bC0fu",
+     "3:00Z0Z_ijUk6t1vpl2_0fu0bC",
+     "3:00f0f_dBSaYIAJd4p_0bC0fu",
+     "3:00R0R_aUDss4blxiX_0fu0bC"
+    ],
+    [
+     6,
+     "costa-mesa-2012-honda-civic"
+    ],
+    [
+     9,
+     165871
+    ],
+    [
+     10,
+     "$6,800"
+    ],
+    "2012 Honda civic"
+   ],
+   [
+    4573500,
+    1142205,
+    146,
+    5998,
+    "1:6~33.9291~-117.8845",
+    "0CI0t2",
+    -1,
+    [
+     13,
+     "q5JXs2AyjaC1eYfSosNsXE"
+    ],
+    [
+     4,
+     "3:00F0F_1FdZXAFt1Xp_0CI0t2",
+     "3:00909_hR4lLbc761g_0CI0t2",
+     "3:00i0i_i0q7yWkpND7_0CI0t2",
+     "3:00a0a_arDsyrzhFHv_0CI0t2",
+     "3:00A0A_h6QJemqzGO0_0CI0t2",
+     "3:00n0n_ctWc21fTdT0_0CI0t2",
+     "3:00z0z_3gq2bAkbqQ6_0CI0t2",
+     "3:00202_obmaXAZPlo_0CI0t2",
+     "3:00B0B_8OpbuaXTFaE_0CI0t2",
+     "3:00000_lfFCaMfQUXw_0CI0t2",
+     "3:00A0A_4Y6POPv4tK1_0CI0t2",
+     "3:00r0r_5j4KNHCcf99_0CI0t2",
+     "3:01717_fBfCrTjhkoX_0CI0t2",
+     "3:01010_8QT0i6XUJeC_0CI0t2",
+     "3:00X0X_llrHt0GAsBv_0CI0t2",
+     "3:00T0T_7ndkCMr8Gx3_0CI0t2",
+     "3:00Q0Q_9C8sNn4Z2u2_0CI0t2",
+     "3:00o0o_5IddAv79td8_0CI0t2",
+     "3:00M0M_uRTmYA4Dwr_0CI0t2"
+    ],
+    [
+     6,
+     "brea-2011-honda-civic-ex-clean-title"
+    ],
+    [
+     9,
+     133500
+    ],
+    [
+     10,
+     "$5,998"
+    ],
+    "2011 HONDA CIVIC EX-L Clean Title Low Miles"
+   ],
+   [
+    3728381,
+    1041803,
+    146,
+    -1,
+    "1:8~33.7671~-117.929",
+    "0eI0b0",
+    [
+     13,
+     "3bw13W5rXWJYQ3uQ3XpbUw"
+    ],
+    [
+     4,
+     "3:00x0x_j7kV7BwCt9P_0eI0b0",
+     "3:00E0E_2umm1L4QDhH_0eI0b0",
+     "3:00Q0Q_2DORn1sgC3n_0eI0b0",
+     "3:00P0P_fd4UZv00DJ1_0eI0b0",
+     "3:00B0B_jCEWga95FeS_0eI0b0"
+    ],
+    [
+     6,
+     "garden-grove-2015-honda-civic-si"
+    ],
+    [
+     9,
+     71000
+    ],
+    "2015 Honda Civic SI"
+   ],
+   [
+    700382,
+    281870,
+    146,
+    10800,
+    "1:9~33.5145~-117.7084",
+    "0CI0t2",
+    [
+     13,
+     "sDD1qkVs39gLVFyiQa866P"
+    ],
+    [
+     4,
+     "3:00505_e2ORbaHRdaC_0CI0t2",
+     "3:00808_5KIrW6hJKX_0CI0t2",
+     "3:00z0z_lNolEI2wURo_0CI0t2",
+     "3:00404_bijtejfbAj8_0t20CI"
+    ],
+    [
+     6,
+     "laguna-niguel-car-for-sale"
+    ],
+    [
+     9,
+     99565
+    ],
+    [
+     10,
+     "$10,800"
+    ],
+    "Car for sale"
+   ],
+   [
+    434894,
+    176196,
+    146,
+    5500,
+    "1:0~33.7364~-117.8229",
+    "0CI0t2",
+    [
+     13,
+     "aZeC4SyfU3u7zoJhec7E13"
+    ],
+    [
+     4,
+     "3:00O0O_bPN53Oqm3zU_0CI0t2",
+     "3:00D0D_2CkvESuS02j_0CI0t2",
+     "3:00h0h_4YMRvxYRMU9_0CI0t2",
+     "3:00H0H_jQjen2bn1ez_0CI0t2",
+     "3:01414_2UwMBJ4eNm7_0CI0t2",
+     "3:00P0P_eUQZnMgF4za_0CI0t2",
+     "3:00m0m_kXIXFuDWQel_0CI0t2",
+     "3:00e0e_7XMjy7ihiCq_0CI0t2",
+     "3:00k0k_2VMcokb01E2_0t20CI",
+     "3:00T0T_bWII7vJ8B1x_0CI0t2",
+     "3:01616_2Om6cyY8mZL_0CI0t2",
+     "3:00x0x_iKyVlidZNfj_0CI0t2"
+    ],
+    [
+     6,
+     "tustin-1999-honda-civic-ex-door-coupe"
+    ],
+    [
+     9,
+     201026
+    ],
+    [
+     10,
+     "$5,500"
+    ],
+    "1999 Honda Civic EX 2-Door Coupe"
+   ],
+   [
+    6400953,
+    1402488,
+    146,
+    17900,
+    "2:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "DtplH7Wo8RG0AenxpiIhcA"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    6401004,
+    1402494,
+    146,
+    17900,
+    "3:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "BIwPI7Wo8RGtLNuwK0wNXQ"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    6400839,
+    1402475,
+    146,
+    17900,
+    "4:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "0gC1F7Wo8RGZq8vslSAfZQ"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    6400890,
+    1402482,
+    146,
+    17900,
+    "5:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "KEbPG7Wo8RGNxNCdz0uXHQ"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ],
+   [
+    6400749,
+    1402463,
+    146,
+    17900,
+    "6:7~33.625~-117.725",
+    "0jm0cT",
+    -2,
+    [
+     13,
+     "KGZRELWo8RGOytUfY7XXBg"
+    ],
+    [
+     4,
+     "3:00P0P_iM3zKdw4TKa_0jm0cT",
+     "3:00404_aOK00Fb6Fnc_0jm0cT",
+     "3:00e0e_5gmJhjFUguC_0jm0cV",
+     "3:00n0n_8GQIzHG66wH_0jm0aT",
+     "3:01515_acO0FiKxe7J_0jm0aT",
+     "3:00c0c_jwoxBuqT6zB_0jm0aT",
+     "3:00a0a_6I6ZPHhWSfA_0jm0aT",
+     "3:00O0O_flqMdkdILuM_0jm0aT",
+     "3:00j0j_1f8xwjfkjmE_0jm0aT",
+     "3:01010_gl9eyihMV0y_0jm0aT",
+     "3:00x0x_3PYLQgPQaw8_0jm0aT",
+     "3:00a0a_aBN878x2ssU_0jm0aT",
+     "3:00Q0Q_53ZzBYwliT6_0jm0aT",
+     "3:00H0H_ivXZXhiGYWh_0jm0aT",
+     "3:00B0B_fdh5ESlaq6J_0jm0aT",
+     "3:00u0u_15qtsAUr00J_0jm0aT",
+     "3:00m0m_3cIYgeLpSBV_0jm0aT",
+     "3:01717_a03CIZgj7XB_0jm0aT",
+     "3:00j0j_32mAhWehF2u_0jm0aT",
+     "3:00P0P_k1yWtskDCKm_08b0ew"
+    ],
+    [
+     6,
+     "laguna-woods-2019-honda-civic-financing"
+    ],
+    [
+     9,
+     30776
+    ],
+    [
+     10,
+     "$17,900"
+    ],
+    "2019 Honda Civic - Financing Available!"
+   ]
+  ],
+  "lang": "en_US",
+  "location": {
+   "areaId": 103,
+   "city": "orange county, CA",
+   "country": "US",
+   "lat": 33.731499,
+   "lon": -117.862,
+   "postal": "",
+   "radius": 60,
+   "region": "CA",
+   "url": "orangecounty.craigslist.org"
+  },
+  "pageTitle": "orange co  cars & trucks for sale by dealer   - craigslist",
+  "params": {
+   "auto_make_model": "honda civic",
+   "cat": "cta",
+   "purveyor": "dealer",
+   "query": ""
+  },
+  "relatedSearches": [],
+  "resultsOrder": "date",
+  "totalResultCount": 15,
+  "updated": 1789759159,
+  "vicinity": null
+ },
+ "errors": []
+}
