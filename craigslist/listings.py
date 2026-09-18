@@ -113,7 +113,8 @@ def search_listings(search: Search, fetch: Fetch) -> SearchResults:
 def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> tuple[list[Listing], int]:
     page = parse_full(fetch(full_url(search, owner_type)), owner_type)
     results = {listing.post_id: listing for listing in page.listings}
-    result_count = page.result_count
+    results_seen = page.result_count
+    """How far into the results paging got, counting results skipped while parsing."""
 
     cache = None
     if page.result_count >= FULL_PAGE_SIZE:
@@ -126,7 +127,7 @@ def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> t
             # Batches restart from the first result, so they repeat the `full` page.
             for listing in batch.listings:
                 results.setdefault(listing.post_id, listing)
-            result_count = max(result_count, offset + batch.result_count)
+            results_seen = max(results_seen, offset + batch.result_count)
             if batch.result_count < BATCH_PAGE_SIZE:
                 break
         else:
@@ -135,9 +136,9 @@ def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> t
                 API_NAME, owner_type, MAX_BATCH_REQUESTS,
             )
 
-    if result_count != page.reported_total:
+    if results_seen != page.reported_total:
         # Normal for dealer searches: the total leaves out results syndicated from other areas.
-        logger.debug("{} {}: got {} results, API reported {}", API_NAME, owner_type, result_count, page.reported_total)
+        logger.debug("{} {}: got {} results, API reported {}", API_NAME, owner_type, results_seen, page.reported_total)
     logger.info("{} {}: {} Listings", API_NAME, owner_type, len(results))
     return list(results.values()), page.reported_total
 
@@ -197,7 +198,7 @@ class BatchPage:
 
 def parse_full(text: str, owner_type: OwnerType) -> FullPage:
     """Parse a step-1 `full` response. Raises ListingSourceError if a result's purveyor
-    code says it is not `owner_type`: the owner filter would then be broken."""
+    code names the other owner type: the owner filter would then be broken."""
     body = _data(text)
     items = _require(body, "items", list)
     decode = _require(body, "decode", dict)
@@ -208,8 +209,11 @@ def parse_full(text: str, owner_type: OwnerType) -> FullPage:
             logger.warning("{}: skipping unreadable result {!r}", API_NAME, item)
             continue
         purveyor = PURVEYOR_CODES.get(item[2])
+        if purveyor is None:
+            logger.warning("{}: skipping result with unknown purveyor code {!r}", API_NAME, item)
+            continue
         if purveyor != owner_type:
-            raise ListingSourceError(f"{API_NAME}: asked for {owner_type} listings, got purveyor code {item[2]!r}")
+            raise ListingSourceError(f"{API_NAME}: asked for {owner_type} listings, got {purveyor} listings")
         listing = _parse_result(item, item[-1], _tagged(item).get(TAG_IMAGES, []), min_posting_id, owner_type)
         if listing:
             listings.append(listing)
