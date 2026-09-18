@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -24,7 +26,7 @@ def test_entry_point_at_debug_level_exits_cleanly_and_writes_debug_lines(tmp_pat
     assert "DEBUG" in (tmp_path / "craigslist.log").read_text()
 
 
-def test_listings_command_prints_each_listing_and_the_count_and_total(tmp_path, monkeypatch, capsys):
+def test_listings_command_prints_each_listing_count_and_curve_coefficients(tmp_path, monkeypatch, capsys):
     from craigslist.__main__ import main
 
     monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
@@ -35,10 +37,27 @@ def test_listings_command_prints_each_listing_and_the_count_and_total(tmp_path, 
         urls.append(url)
         return dealer_full
 
-    main(["listings", "--city", "orange county", "--make", "honda", "--model", "civic", "--owner-type", "dealer"], fetch)
+    main(
+        ["listings", "--state", "CA", "--city", "orange county", "--make", "honda", "--model", "civic", "--owner-type", "dealer"],
+        fetch,
+    )
 
     lines = capsys.readouterr().out.splitlines()
     assert len(urls) == 1 and "purveyor=dealer" in urls[0]
     assert len(lines) == 20
     assert "2017 Honda Civic EX Sedan 4D" in lines[0]
-    assert lines[-1] == "dealer: 19 Listings, API reported total 15"
+    assert lines[-1].startswith("dealer: 19 Listings, API reported total 15; curve coefficients a=")
+    assert " b=" in lines[-1]
+    assert " c=" in lines[-1]
+
+
+def test_listings_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch, capsys):
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+
+    with pytest.raises(SystemExit) as error:
+        main(["listings", "--state", "XX", "--city", "Orange County", "--make", "honda", "--model", "civic"], lambda url: "")
+
+    assert error.value.code == 2
+    assert "unknown state 'XX'" in capsys.readouterr().err
