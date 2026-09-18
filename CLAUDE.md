@@ -17,6 +17,8 @@ uv sync                                  # create .venv from uv.lock
 uv run __init__.py                       # Dash dev server (debug=True), http://127.0.0.1:8050
 uv run __init__.py --log DEBUG
 uv run python -m craigslist --log DEBUG  # rebuild entry point
+uv run python -m craigslist listings --make honda --model civic   # live Search, prints Listings
+uv run python tests/fixtures/refresh.py  # re-fetch the saved API responses (hits Craigslist)
 uv run pytest                            # all tests
 uv run pytest tests/test_log.py          # one test file
 uv run --with mypy mypy --explicit-package-bases craigslist tests
@@ -25,7 +27,7 @@ uv add <pkg>                             # add a dependency (updates pyproject.t
 
 - Run from the repo root. Image downloads use the relative path `assets/car_images/`.
 - No Chrome install needed. Selenium Manager downloads Chrome for Testing and chromedriver into `~/.cache/selenium` on first launch.
-- Tests cover only the `craigslist/` rebuild; the Dash app has none. There is no lint config, and mypy is not a dependency.
+- Tests cover only the `craigslist/` rebuild; the Dash app has none. No test may touch the network (`tests/conftest.py` makes connecting fail). The Listing source tests use saved API responses in `tests/fixtures/`, trimmed to 20 results; the tests shrink the page sizes to 20 so those fixtures page like a large search. There is no lint config, and mypy is not a dependency.
 - The root `__init__.py` makes pytest and mypy treat the repo root as a package and import the Dash app. `tests/conftest.py` stops pytest doing that, and mypy needs `--explicit-package-bases`. Both workarounds go away with issue #10.
 - New code must not use star imports or do work at import time. Tests check for star imports, and that importing every module with stray command-line flags succeeds and creates no files or directories.
 - `scratch.py` and `scratch2.py` are old experiments. They import `webdriver_manager` and `bs4`, which are not dependencies.
@@ -34,7 +36,8 @@ uv add <pkg>                             # add a dependency (updates pyproject.t
 
 ### Rebuild (`craigslist/`)
 
-- `__main__.py`: entry point. Parses `--log` and calls `configure_logging`.
+- `__main__.py`: entry point. Parses `--log`, calls `configure_logging`, and runs the `listings` command.
+- `listings.py`: Listing source. `search_listings(Search, fetch)` returns Listings from Craigslist's undocumented JSON search API (`sapi.craigslist.org`), one API search per owner type. `fetch(url) -> str` is passed in; `HttpFetcher` is the live one (User-Agent, 0.5 s pacing). Every Craigslist URL and response-layout guess lives here. Findings behind it: `docs/research/craigslist-search.md`.
 - `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
 - `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`, exported once from the `resources/` pickles; edit the CSVs to add a city or model. State and make lookups ignore case.
 
@@ -54,6 +57,12 @@ Import chain: `__init__.py` -> `layout_objects.py` -> `backend.py` -> `web_inter
 - `p_car_objects.p`: dict of posting id (numeric `data-pid` string) -> `backend.car_object`. It is a scrape cache: rewritten after every new car, and hits skip the detail-page fetch. Renaming or moving `car_object` breaks unpickling.
 
 ## Gotchas
+
+- Search API (`listings.py`), as of 2026-09:
+  - `totalResultCount` counts local results only, so paging runs until a batch comes back short. Dealer searches return more results than the total, syndicated from other areas.
+  - `batch` pages restart from result 0, repeating the 360 `full` results; Listings are deduplicated by post id.
+  - Step 2 (`full?batch=0-<cacheTs>-0-1-0`) has no `cacheId` when there are too few results to page.
+  - Results with no price are skipped and logged. No mileage gives `None`; no photos gives no image codes.
 
 - Craigslist selectors, current as of 2026-09:
   - Each listing is a `gallery-card`, with the title and link in `a.posting-title` and the price in `priceinfo`.
