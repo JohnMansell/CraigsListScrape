@@ -1,0 +1,1223 @@
+{
+ "apiVersion": 8,
+ "configId": "af13f3599b88d5f3b3766466d915bd80d88d12c149fdf8fed646db2e15c5c701",
+ "configTs": 1789753152,
+ "data": {
+  "areas": {
+   "103": {
+    "areaUnits": "ft",
+    "currency": "USD",
+    "distanceUnits": "mi",
+    "name": "orangecounty"
+   }
+  },
+  "bundleDups": 0,
+  "cacheId": "MToBItj1RnL4mcbe8GgvKxIDB9ByPeYTqICcNdVThnow8-1JdLq3A3X4e6N_bHgHfcXNz8QQ62jYhx03reV_CABNwSV9Ndv27bfdUezsCDFJPSjXL5KFD_7VEogGilrK0HAFuJVYCCeVOFK-9jbDouTmlUn9X5j3owGmncgMPrznDBKReV8m2S6_hYiYv4pHJTu4g0kzxjLV-w",
+  "cacheTs": 1789758620,
+  "canonicalUrl": "//www.craigslist.org/search/area/orangecounty?cat=cta&purveyor=owner",
+  "categoryAbbr": "cto",
+  "decode": {
+   "locationDescriptions": [
+    0,
+    "Laguna Niguel",
+    "Westminster",
+    "Bellflower",
+    "Torrance",
+    "Orange County",
+    "Lakewood",
+    "Irvine",
+    "Fullerton",
+    "CARLSBAD/O'SIDE",
+    "Costa Mesa",
+    "Anaheim",
+    "Tustin",
+    "WESTMINSTER ORANGE COUNTY",
+    "Fountain Valley",
+    "Orange",
+    "West Covina",
+    "Yorba Linda",
+    "Huntington Beach",
+    "Newport Beach",
+    "East Irvine",
+    "Banning",
+    "Costa Mesa, CA",
+    "ANAHEIM",
+    "((MISSION VIEJO ************* ORANGE COUNTY))",
+    "MISSION VIEJO",
+    "La Habra",
+    "Oceanside",
+    "Dana Point",
+    "Garden Grove",
+    "Orange county",
+    "Lake Forest",
+    "Lake forest",
+    "Mission Viejo",
+    "COTO DE CAZA, CALIFORNIA",
+    "Santa Ana",
+    "Firm",
+    "Organge",
+    "foutain valley",
+    "Trabuco Canyon",
+    "Laguna Beach",
+    "San Diego",
+    "Laguna niguel",
+    "Yorba linda",
+    "seal beach/ Long Beach",
+    "Buena Park",
+    "Laguna Hills",
+    "Garden grove",
+    "Seal Beach",
+    "orange",
+    "foutain valley OC",
+    "Corona",
+    "Coast",
+    "Long Beach",
+    "Rancho Santa Margarita",
+    "Santa Ana, CA",
+    "Commerce",
+    "Wildomar",
+    "BUENA  PARK",
+    "Brea",
+    "SANTA ANA",
+    "Los Alamitos",
+    "Corona Del Mar",
+    "YORBA LINDA",
+    "West Hollywood",
+    "San Clemente",
+    "Huntington  Beach",
+    "Aliso Viejo",
+    "Irvine, CA",
+    "Ladera Ranch",
+    "ANAHEIM HILLS",
+    "ONTARIO",
+    "Yorba Lida",
+    "Arcadia",
+    "FULLERTON",
+    "Cypress",
+    "Westminster ca",
+    "irvine",
+    "fullerton",
+    "Danville",
+    "los Angeles",
+    "(IRVINE OC *************************************)",
+    "OC",
+    "Whittier",
+    "Buena parks",
+    "Midway city",
+    "San Juan Capistrano",
+    "(O.C. ORANGE COUNTY --- COSTA MESA -------------------92627)",
+    "La Habra Heights",
+    "LAKE HAVASU CITY",
+    "HUNTINGTON BEACH",
+    "AGUA DULCE",
+    "menifee",
+    "Wildomar Ca -- near Temecula / Lake Elsinore area",
+    "lake Forest -Irvine",
+    "Laguna",
+    "Orange country",
+    "lake forest",
+    "mission viejo",
+    "Foothill Ranch",
+    "Anaheim hills",
+    "Chino",
+    "BUENA PARK",
+    "Temecula",
+    "Mesa AZ",
+    "Anaheim Hills",
+    "anaheum",
+    "Oc",
+    "COSTA MESA",
+    "La Palma",
+    "aliso viejo",
+    "Mission viejo",
+    "Laguna beach",
+    "Come see it",
+    "long beach",
+    "tustin",
+    "Orange, California",
+    "Santa Fe Springs",
+    "Rancho Santa Margari",
+    "Cerritos",
+    "ORANGE",
+    "Laguna Woods",
+    "orange county",
+    "san juan capistrano",
+    "Scottsdale",
+    "laguna niguel",
+    "Gardengrove",
+    "Anaheim, CA",
+    "Anaheim/Norwalk",
+    "Orange county anaheim",
+    "Orange county Stanton",
+    "Orange county stanton",
+    "Stanton Orange County",
+    "IRVINE",
+    "Lake Elsinore",
+    "orange ca",
+    "LaHabra",
+    "South OC",
+    "OXNARD   CA",
+    "DOWNEY",
+    "Laguna hills",
+    "Anaheim Hills,",
+    "Midway City",
+    "Tucson Arizona",
+    "Dana Point / San Clemente",
+    "Huntington beach",
+    "Buena park",
+    "garden grove",
+    "Oring",
+    "Lake Forrest",
+    "la habra",
+    "Orange, CA",
+    "Alpine",
+    "Yorbalinda",
+    "Irvine, California",
+    "Stanton",
+    "Lakeside",
+    "PORTOLA HILLS",
+    "Orange county , CA",
+    "Costa mesa",
+    "oc/indland",
+    "Fountain valley",
+    "San clemente",
+    "anaheim",
+    "Beach",
+    "Escondido",
+    "TEMECULA",
+    "Placentia",
+    "Santa ana",
+    "costa mesa",
+    "Placentia, CA",
+    "santa ana/Christian Spanish/Eng",
+    "ALISO VIEJO",
+    "COSTA MESA ----  ORANGE COUNTY ---------------",
+    "COSTA MESA ----  ORNAGE COUNTY ---------------",
+    "Mission Viego",
+    "Long beach",
+    "placentia",
+    "Las vegas",
+    "brea",
+    "Phoenix",
+    "los angeles",
+    "Anaheim Ca.",
+    "GARDEN GROVE",
+    "homestead",
+    "VICTORVILLE",
+    "Capistrano Beach",
+    "SAN DIMAS",
+    "Landers",
+    "Westminster CA",
+    "O.C.  ORANGE COUINTY --- COSTA MESA ------92627",
+    "Colorado Springs",
+    "Los alamitos",
+    "yorba linda",
+    "El Cajon",
+    "Westminster, CA",
+    "Anahiem",
+    "la palma",
+    "corona",
+    "Silverado",
+    "Fountain Valley, California",
+    "La Mirada",
+    "Oak View (Ventura County)",
+    "costa mesa, orange county,,,, 92627",
+    "Arroyo Grande",
+    "Buena Paark",
+    "Coto De Caza",
+    "FOUNTAIN VALLEY",
+    "Santa Ana Downtown",
+    "irvine,ca",
+    "Atwood",
+    "Modjeska",
+    "FIRM FIRM FIRM",
+    "RSM",
+    "WESTMINSTER",
+    "Mission Viejo, CA",
+    "Antelope Valley",
+    "La habra, CA",
+    "santa ana",
+    "San Clemente, CA",
+    "Seal/LB",
+    "Rancha Santa Margarita"
+   ],
+   "locations": [
+    0,
+    [
+     103,
+     "orangecounty"
+    ]
+   ],
+   "maxPostedDate": 1789758136,
+   "minDate": 1821294621,
+   "minPostedDate": 1787124633,
+   "minPostingId": 7954482646,
+   "neighborhoods": [
+    0
+   ],
+   "version": 2
+  },
+  "detailsOrder": "date",
+  "filterButtons": [
+   {
+    "buttonLabel": "price",
+    "formConfig": {
+     "input_prefix": "$",
+     "is_default_button": 1,
+     "label": "price",
+     "maxVal": {
+      "name": "max_price",
+      "placeholder": "max"
+     },
+     "minVal": {
+      "name": "min_price",
+      "placeholder": "min"
+     },
+     "name": "price",
+     "type": "range",
+     "variant": "barchartwidget"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "by owner",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "sold by",
+     "name": "purveyor",
+     "options": [
+      {
+       "label": "all",
+       "value": "all"
+      },
+      {
+       "label": "owner",
+       "value": "owner"
+      },
+      {
+       "label": "dealer",
+       "value": "dealer"
+      }
+     ],
+     "type": "select",
+     "variant": "radio"
+    },
+    "isSet": 1
+   },
+   {
+    "buttonLabel": "type",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "type",
+     "name": "auto_bodytype",
+     "options": [
+      {
+       "label": "bus",
+       "value": 1
+      },
+      {
+       "label": "convertible",
+       "value": 2
+      },
+      {
+       "label": "coupe",
+       "value": 3
+      },
+      {
+       "label": "hatchback",
+       "value": 4
+      },
+      {
+       "label": "minivan",
+       "value": 5
+      },
+      {
+       "label": "offroad",
+       "value": 6
+      },
+      {
+       "label": "pickup",
+       "value": 7
+      },
+      {
+       "label": "sedan",
+       "value": 8
+      },
+      {
+       "label": "truck",
+       "value": 9
+      },
+      {
+       "label": "SUV",
+       "value": 10
+      },
+      {
+       "label": "wagon",
+       "value": 11
+      },
+      {
+       "label": "van",
+       "value": 12
+      },
+      {
+       "label": "other",
+       "value": 13
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "model year",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "model year",
+     "maxVal": {
+      "name": "max_auto_year",
+      "placeholder": "max"
+     },
+     "minVal": {
+      "name": "min_auto_year",
+      "placeholder": "min"
+     },
+     "name": "auto_year",
+     "type": "range"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "fuel",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "fuel",
+     "name": "auto_fuel_type",
+     "options": [
+      {
+       "label": "gas",
+       "value": 1
+      },
+      {
+       "label": "diesel",
+       "value": 2
+      },
+      {
+       "label": "hybrid",
+       "value": 3
+      },
+      {
+       "label": "electric",
+       "value": 4
+      },
+      {
+       "label": "other",
+       "value": 6
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   },
+   {
+    "buttonLabel": "condition",
+    "formConfig": {
+     "is_default_button": 1,
+     "label": "condition",
+     "name": "condition",
+     "options": [
+      {
+       "label": "new",
+       "value": "10"
+      },
+      {
+       "label": "like new",
+       "value": "20"
+      },
+      {
+       "label": "excellent",
+       "value": "30"
+      },
+      {
+       "label": "good",
+       "value": "40"
+      },
+      {
+       "label": "fair",
+       "value": "50"
+      },
+      {
+       "label": "salvage",
+       "value": "60"
+      }
+     ],
+     "type": "multi"
+    },
+    "isSet": ""
+   }
+  ],
+  "filters": [
+   {
+    "autocomplete": "search",
+    "label": "query",
+    "name": "query",
+    "type": "text"
+   },
+   {
+    "name": "vicinity",
+    "type": "hidden"
+   },
+   {
+    "label": "sort by",
+    "name": "sort",
+    "options": [
+     {
+      "label": "newest",
+      "value": "date"
+     },
+     {
+      "label": "oldest",
+      "value": "dateoldest"
+     },
+     {
+      "label": "﹩→ $$$",
+      "value": "priceasc"
+     },
+     {
+      "label": "$$$ → ﹩",
+      "value": "pricedsc"
+     },
+     {
+      "label": "distance",
+      "value": "dist"
+     }
+    ],
+    "type": "select",
+    "value": "date"
+   },
+   {
+    "input_prefix": "$",
+    "label": "price",
+    "maxVal": {
+     "name": "max_price",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_price",
+     "placeholder": "min"
+    },
+    "name": "price",
+    "type": "range",
+    "variant": "barchartwidget"
+   },
+   {
+    "label": "sold by",
+    "name": "purveyor",
+    "options": [
+     {
+      "label": "all",
+      "value": "all"
+     },
+     {
+      "label": "owner",
+      "value": "owner"
+     },
+     {
+      "label": "dealer",
+      "value": "dealer"
+     }
+    ],
+    "type": "select"
+   },
+   {
+    "autocomplete": "makemodel",
+    "label": "make and model",
+    "name": "auto_make_model",
+    "type": "text",
+    "variant": "text"
+   },
+   {
+    "label": "odometer",
+    "maxVal": {
+     "name": "max_auto_miles",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_auto_miles",
+     "placeholder": "min"
+    },
+    "name": "auto_miles",
+    "type": "range"
+   },
+   {
+    "label": "model year",
+    "maxVal": {
+     "name": "max_auto_year",
+     "placeholder": "max"
+    },
+    "minVal": {
+     "name": "min_auto_year",
+     "placeholder": "min"
+    },
+    "name": "auto_year",
+    "type": "range",
+    "variant": "yearRange"
+   },
+   {
+    "label": "drive",
+    "name": "auto_drivetrain",
+    "options": [
+     {
+      "label": "fwd",
+      "value": 1
+     },
+     {
+      "label": "rwd",
+      "value": 2
+     },
+     {
+      "label": "4wd",
+      "value": 3
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "transmission",
+    "name": "auto_transmission",
+    "options": [
+     {
+      "label": "manual",
+      "value": 1
+     },
+     {
+      "label": "automatic",
+      "value": 2
+     },
+     {
+      "label": "other",
+      "value": 3
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "condition",
+    "name": "condition",
+    "options": [
+     {
+      "label": "new",
+      "value": 10
+     },
+     {
+      "label": "like new",
+      "value": 20
+     },
+     {
+      "label": "excellent",
+      "value": 30
+     },
+     {
+      "label": "good",
+      "value": 40
+     },
+     {
+      "label": "fair",
+      "value": 50
+     },
+     {
+      "label": "salvage",
+      "value": 60
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "cylinders",
+    "name": "auto_cylinders",
+    "options": [
+     {
+      "label": "3 cylinders",
+      "value": 1
+     },
+     {
+      "label": "4 cylinders",
+      "value": 2
+     },
+     {
+      "label": "5 cylinders",
+      "value": 3
+     },
+     {
+      "label": "6 cylinders",
+      "value": 4
+     },
+     {
+      "label": "8 cylinders",
+      "value": 5
+     },
+     {
+      "label": "10 cylinders",
+      "value": 6
+     },
+     {
+      "label": "12 cylinders",
+      "value": 7
+     },
+     {
+      "label": "other",
+      "value": 8
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "title status",
+    "name": "auto_title_status",
+    "options": [
+     {
+      "label": "clean",
+      "value": 1
+     },
+     {
+      "label": "salvage",
+      "value": 2
+     },
+     {
+      "label": "rebuilt",
+      "value": 3
+     },
+     {
+      "label": "parts only",
+      "value": 4
+     },
+     {
+      "label": "lien",
+      "value": 5
+     },
+     {
+      "label": "missing",
+      "value": 6
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "type",
+    "name": "auto_bodytype",
+    "options": [
+     {
+      "label": "bus",
+      "value": 1
+     },
+     {
+      "label": "convertible",
+      "value": 2
+     },
+     {
+      "label": "coupe",
+      "value": 3
+     },
+     {
+      "label": "hatchback",
+      "value": 4
+     },
+     {
+      "label": "minivan",
+      "value": 5
+     },
+     {
+      "label": "offroad",
+      "value": 6
+     },
+     {
+      "label": "pickup",
+      "value": 7
+     },
+     {
+      "label": "sedan",
+      "value": 8
+     },
+     {
+      "label": "truck",
+      "value": 9
+     },
+     {
+      "label": "SUV",
+      "value": 10
+     },
+     {
+      "label": "wagon",
+      "value": 11
+     },
+     {
+      "label": "van",
+      "value": 12
+     },
+     {
+      "label": "other",
+      "value": 13
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "paint color",
+    "name": "auto_paint",
+    "options": [
+     {
+      "label": "black",
+      "value": 1
+     },
+     {
+      "label": "blue",
+      "value": 2
+     },
+     {
+      "label": "brown",
+      "value": 20
+     },
+     {
+      "label": "green",
+      "value": 3
+     },
+     {
+      "label": "grey",
+      "value": 4
+     },
+     {
+      "label": "orange",
+      "value": 5
+     },
+     {
+      "label": "purple",
+      "value": 6
+     },
+     {
+      "label": "red",
+      "value": 7
+     },
+     {
+      "label": "silver",
+      "value": 8
+     },
+     {
+      "label": "white",
+      "value": 9
+     },
+     {
+      "label": "yellow",
+      "value": 10
+     },
+     {
+      "label": "custom",
+      "value": 11
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "label": "fuel",
+    "name": "auto_fuel_type",
+    "options": [
+     {
+      "label": "gas",
+      "value": 1
+     },
+     {
+      "label": "diesel",
+      "value": 2
+     },
+     {
+      "label": "hybrid",
+      "value": 3
+     },
+     {
+      "label": "electric",
+      "value": 4
+     },
+     {
+      "label": "other",
+      "value": 6
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   },
+   {
+    "form": [
+     {
+      "label": "search titles only",
+      "name": "srchType",
+      "type": "boolean",
+      "value": "T"
+     },
+     {
+      "label": "has image",
+      "name": "hasPic",
+      "type": "boolean",
+      "value": 1
+     },
+     {
+      "label": "posted today",
+      "name": "postedToday",
+      "type": "boolean",
+      "value": 1
+     },
+     {
+      "label": "hide duplicates",
+      "name": "bundleDuplicates",
+      "type": "boolean",
+      "value": 1
+     }
+    ],
+    "name": "basic bools",
+    "type": "group"
+   },
+   {
+    "form": [
+     {
+      "label": "cryptocurrency ok",
+      "name": "crypto_currency_ok",
+      "type": "boolean",
+      "value": 1,
+      "variant": "checkbox"
+     },
+     {
+      "label": "delivery available",
+      "name": "delivery_available",
+      "type": "boolean",
+      "value": 1,
+      "variant": "checkbox"
+     }
+    ],
+    "name": "crypto_currency_ok",
+    "type": "group"
+   },
+   {
+    "label": "language of posting",
+    "name": "language",
+    "options": [
+     {
+      "label": "afrikaans",
+      "value": 1
+     },
+     {
+      "label": "català",
+      "value": 2
+     },
+     {
+      "label": "dansk",
+      "value": 3
+     },
+     {
+      "label": "deutsch",
+      "value": 4
+     },
+     {
+      "label": "english",
+      "value": 5
+     },
+     {
+      "label": "español",
+      "value": 6
+     },
+     {
+      "label": "suomi",
+      "value": 7
+     },
+     {
+      "label": "français",
+      "value": 8
+     },
+     {
+      "label": "italiano",
+      "value": 9
+     },
+     {
+      "label": "nederlands",
+      "value": 10
+     },
+     {
+      "label": "norsk",
+      "value": 11
+     },
+     {
+      "label": "português",
+      "value": 12
+     },
+     {
+      "label": "svenska",
+      "value": 13
+     },
+     {
+      "label": "filipino",
+      "value": 14
+     },
+     {
+      "label": "türkçe",
+      "value": 15
+     },
+     {
+      "label": "中文",
+      "value": 16
+     },
+     {
+      "label": "العربية",
+      "value": 17
+     },
+     {
+      "label": "日本語",
+      "value": 18
+     },
+     {
+      "label": "한국말",
+      "value": 19
+     },
+     {
+      "label": "русский",
+      "value": 20
+     },
+     {
+      "label": "tiếng việt",
+      "value": 21
+     }
+    ],
+    "type": "multi",
+    "variant": "standard"
+   }
+  ],
+  "hubLinks": [
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=suvs",
+    "linkText": "SUVs",
+    "name": "suvs",
+    "title": "SUVs for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=classic-cars",
+    "linkText": "classic cars",
+    "name": "classic-cars",
+    "title": "classic cars for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=electric-cars",
+    "linkText": "electric cars",
+    "name": "electric-cars",
+    "title": "electric cars for sale"
+   },
+   {
+    "href": "https://www.craigslist.org/search/area/orangecounty?hub=pickups-trucks",
+    "linkText": "pickups-trucks",
+    "name": "pickups-trucks",
+    "title": "pickups and trucks for sale"
+   }
+  ],
+  "humanReadableParams": [
+   {
+    "key": "purveyor",
+    "value": "for sale by owner"
+   },
+   {
+    "key": "sort",
+    "name": "sort",
+    "value": "newest"
+   }
+  ],
+  "items": [
+   [
+    14325803,
+    2633503,
+    145,
+    7500,
+    "1:1~33.5145~-117.7084",
+    "0CI0t2"
+   ],
+   [
+    14291603,
+    2630866,
+    145,
+    10900,
+    "1:2~33.7524~-117.9939",
+    "0wU0oG"
+   ],
+   [
+    14276084,
+    2629616,
+    145,
+    13999,
+    "1:3~33.8186~-117.9729",
+    "0CI0t2"
+   ],
+   [
+    14275457,
+    2629554,
+    145,
+    23999,
+    "1:3~33.8186~-117.9729",
+    "0CI0t2"
+   ],
+   [
+    14273273,
+    2629355,
+    145,
+    3600,
+    "1:4~33.8925~-118.2961",
+    "0x20oM"
+   ],
+   [
+    14257475,
+    2628094,
+    145,
+    5000,
+    "1:5~33.721~-118.0033",
+    "0CI0t2",
+    -38
+   ],
+   [
+    14251868,
+    2627756,
+    145,
+    9000,
+    "1:0~33.6607~-117.8264",
+    "0li0sf"
+   ],
+   [
+    14246816,
+    2627435,
+    145,
+    25500,
+    "1:6~33.8512~-118.1457",
+    "0CI0t2"
+   ],
+   [
+    14240078,
+    2626966,
+    145,
+    1,
+    "1:7~33.6505~-117.8241",
+    0,
+    -23
+   ],
+   [
+    14239298,
+    2626910,
+    145,
+    3600,
+    "1:8~33.8873~-117.8946",
+    "0CI0t2"
+   ],
+   [
+    14230172,
+    2626212,
+    145,
+    44900,
+    "1:9~33.1968~-117.2831",
+    "0CI0t2"
+   ],
+   [
+    14225942,
+    2625859,
+    145,
+    5500,
+    "1:10~33.6253~-117.9064",
+    "0t20CI"
+   ],
+   [
+    14220482,
+    2625426,
+    145,
+    2900,
+    "1:11~33.836~-117.914",
+    "0CI0t2"
+   ],
+   [
+    14217617,
+    2625216,
+    145,
+    8950,
+    "1:12~33.7364~-117.8297",
+    "0CI0hT"
+   ],
+   [
+    14216273,
+    2625122,
+    145,
+    6700,
+    "1:13~33.7524~-117.9939",
+    "0CI0t2"
+   ],
+   [
+    14211095,
+    2624746,
+    145,
+    7900,
+    "1:11~33.836~-117.914",
+    "0CI0t2"
+   ],
+   [
+    14209658,
+    2624642,
+    145,
+    2100,
+    "1:14~33.6866~-117.9451",
+    "0CI0t2"
+   ],
+   [
+    14208791,
+    2624583,
+    145,
+    2950,
+    "1:0~33.6773~-118.0051",
+    "0CI0t2"
+   ],
+   [
+    14198672,
+    2623786,
+    145,
+    8500,
+    "1:15~33.8145~-117.8455",
+    "0CI0t2"
+   ],
+   [
+    14170976,
+    2621848,
+    145,
+    9850,
+    "1:5~33.6951~-117.8224",
+    "0iM0i8"
+   ]
+  ],
+  "lang": "en_US",
+  "location": {
+   "areaId": 103,
+   "city": "orange county, CA",
+   "country": "US",
+   "lat": 33.731499,
+   "lon": -117.862,
+   "postal": "",
+   "radius": 60,
+   "region": "CA",
+   "url": "orangecounty.craigslist.org"
+  },
+  "maxPostedTs": 1789758136,
+  "pageTitle": "orange co  cars & trucks for sale by owner   - craigslist",
+  "params": {
+   "cat": "cta",
+   "purveyor": "owner",
+   "query": ""
+  },
+  "relatedSearches": [],
+  "resultsOrder": "date",
+  "totalResultCount": 1508,
+  "updated": 1789758621,
+  "vicinity": null
+ },
+ "errors": []
+}
