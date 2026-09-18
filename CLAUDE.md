@@ -36,6 +36,7 @@ uv add <pkg>                             # add a dependency (updates pyproject.t
 
 - `__main__.py`: entry point. Parses `--log` and calls `configure_logging`.
 - `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
+- `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`, exported once from the `resources/` pickles; edit the CSVs to add a city or model. State and make lookups ignore case.
 
 ### Dash app
 
