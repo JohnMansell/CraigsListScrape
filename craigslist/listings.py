@@ -23,10 +23,12 @@ from urllib.parse import urlencode, urlsplit
 
 import httpx
 from loguru import logger
+from selectolax.parser import HTMLParser
 
 from craigslist.lookup import City
 
 API_NAME = "Craigslist search API"
+DETAIL_PAGE_NAME = "Craigslist listing detail page"
 API_BASE = "https://sapi.craigslist.org/web/v8/postings/search"
 LISTING_BASE = "https://www.craigslist.org/view/d"
 IMAGE_BASE = "https://images.craigslist.org"
@@ -97,6 +99,33 @@ class SearchResults:
 def image_url(code: str, size: str = "600x450") -> str:
     """Sizes seen: 600x450, 300x300, 50x50c."""
     return f"{IMAGE_BASE}/{code}_{size}.jpg"
+
+
+def listing_attributes(listing: Listing, fetch: Fetch) -> dict[str, str]:
+    """Fetch the extra attributes from one Listing's detail page.
+
+    A failed request or a page without a post id may be a Craigslist block. Log it and
+    return no attributes rather than retrying or delaying a Search result.
+    """
+    try:
+        page = HTMLParser(fetch(listing.url))
+    except Exception as error:
+        logger.warning("{}: failed to fetch {}: {}", DETAIL_PAGE_NAME, listing.url, error)
+        return {}
+
+    if not any(re.fullmatch(r"post id:\s*\d+", info.text(strip=True), re.IGNORECASE) for info in page.css(".postinginfo")):
+        logger.warning("{}: no post id in {}", DETAIL_PAGE_NAME, listing.url)
+        return {}
+
+    attributes = {}
+    for attribute in page.css(".attrgroup .attr"):
+        label = attribute.css_first(".labl")
+        value = attribute.css_first(".valu")
+        if label is not None and value is not None:
+            key = label.text(strip=True).removesuffix(":")
+            if key.casefold() not in {"mileage", "odometer"}:
+                attributes[key] = value.text(strip=True)
+    return attributes
 
 
 def search_listings(search: Search, fetch: Fetch) -> SearchResults:
