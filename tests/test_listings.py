@@ -13,6 +13,7 @@ from craigslist.listings import (
     OwnerType,
     Search,
     image_url,
+    listing_attributes,
     parse_batch,
     parse_full,
     search_listings,
@@ -125,6 +126,58 @@ def test_full_result_with_extra_integer_after_the_image_suffix_is_read():
     assert rdx.price == 5000
     assert rdx.mileage == 199400
     assert rdx.image_codes[0] == "00808_gPzpE2Dr7ep_0CI0t2"
+
+
+def test_listing_attributes_parse_a_saved_detail_page():
+    listing = parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings[0]
+
+    attributes = listing_attributes(listing, lambda url: fixture("listing_detail.html"))
+
+    assert attributes == {
+        "VIN": "55SWF4JBXFU078066",
+        "contact": "sms: 949-555-0100",
+        "condition": "excellent",
+        "cylinders": "4 cylinders",
+        "fuel": "gas",
+        "title status": "clean",
+        "transmission": "automatic",
+        "type": "sedan",
+    }
+    assert "odometer" not in attributes
+
+
+def test_listing_attributes_do_not_read_mileage_from_the_detail_page():
+    listing = parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings[0]
+
+    attributes = listing_attributes(listing, lambda url: fixture("listing_detail.html").replace("odometer:", "mileage:"))
+
+    assert "mileage" not in attributes
+
+
+def test_listing_attribute_value_containing_a_colon_is_kept_whole():
+    listing = parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings[0]
+
+    attributes = listing_attributes(listing, lambda url: fixture("listing_detail.html"))
+
+    assert attributes["contact"] == "sms: 949-555-0100"
+
+
+def test_failed_listing_attribute_fetch_is_logged_and_returns_no_attributes(log_messages):
+    listing = parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings[0]
+
+    attributes = listing_attributes(listing, lambda url: (_ for _ in ()).throw(ListingSourceError("HTTP 403")))
+
+    assert attributes == {}
+    assert any("listing detail page: failed to fetch" in message for message in log_messages)
+
+
+def test_detail_page_without_a_post_id_is_logged_and_returns_no_attributes(log_messages):
+    listing = parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings[0]
+
+    attributes = listing_attributes(listing, lambda url: fixture("listing_detail.html").replace("post id: 7968808449", ""))
+
+    assert attributes == {}
+    assert any("listing detail page: no post id" in message for message in log_messages)
 
 
 def test_result_with_no_photos_is_kept_with_no_image_codes():
