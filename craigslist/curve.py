@@ -25,6 +25,12 @@ class PriceCurve:
     """Sampled points ready for a caller to draw."""
 
     points: tuple[CurvePoint, ...]
+    amplitude: float
+    """``a`` in ``price = a * exp(-b * miles) + c``."""
+    rate: float
+    """``b`` in ``price = a * exp(-b * miles) + c``."""
+    floor: float
+    """``c`` in ``price = a * exp(-b * miles) + c``."""
 
 
 @dataclass(frozen=True)
@@ -80,7 +86,13 @@ def fit_price_curve(points: Iterable[MileagePrice]) -> PriceCurve | NotEnoughDat
     sample_prices = _decay(sample_miles / MILE_SCALE, *parameters)
     if not np.all(np.isfinite(sample_prices)):
         return NotEnoughData("curve fitting produced non-finite prices")
-    return PriceCurve(tuple(CurvePoint(float(mileage), float(price)) for mileage, price in zip(sample_miles, sample_prices)))
+    amplitude, rate, floor = (float(parameter) for parameter in parameters)
+    return PriceCurve(
+        tuple(CurvePoint(float(mileage), float(price)) for mileage, price in zip(sample_miles, sample_prices)),
+        amplitude,
+        rate / MILE_SCALE,
+        floor,
+    )
 
 
 def _decay(miles: np.ndarray, amplitude: float, rate: float, floor: float) -> np.ndarray:
