@@ -3,14 +3,16 @@ import argparse
 from loguru import logger
 
 from craigslist.curve import NotEnoughData, PriceCurve
-from craigslist.listings import Fetch, HttpFetcher, OwnerType
+from craigslist.listings import Fetch, OwnerType
 from craigslist.log import LOG_LEVELS, configure_logging
-from craigslist.search import Search, SearchError, SearchResult, run_search
+from craigslist.search import Search, SearchError, SearchResult, run_live_search
 
 
 def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
     """`fetch` replaces the live HTTP fetcher, for tests."""
-    parser = argparse.ArgumentParser(prog="craigslist", description="Craigslist price vs. mileage app")
+    parser = argparse.ArgumentParser(
+        prog="craigslist", description="Craigslist price vs. mileage app. With no command, serves the Search page."
+    )
     parser.add_argument("--log", dest="log_level", default="INFO", choices=LOG_LEVELS, help="logging level")
     commands = parser.add_subparsers(dest="command")
     listings_parser = commands.add_parser("listings", help="print the Listings for a live Search")
@@ -32,18 +34,14 @@ def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
         except SearchError as error:
             parser.error(str(error))
     else:
-        logger.info("Nothing to run: pass a command, such as `listings`")
+        # Imported here so the `listings` command does not load NiceGUI.
+        from craigslist import page
+
+        page.serve()
 
 
 def print_listings(search: Search, fetch: Fetch | None) -> None:
-    http = None
-    if fetch is None:
-        fetch = http = HttpFetcher()
-    try:
-        results = run_search(search, fetch)
-    finally:
-        if http:
-            http.close()
+    results = run_live_search(search, fetch)
     for listing in results.listings:
         mileage = "?" if listing.mileage is None else f"{listing.mileage:,}"
         print(f"{listing.owner_type:<6} {listing.post_id} ${listing.price:>7,} {mileage:>9} mi  {listing.title}")

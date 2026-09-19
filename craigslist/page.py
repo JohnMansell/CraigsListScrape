@@ -1,0 +1,159 @@
+"""The Search page: toolbar of Search controls, price vs. mileage chart, status line.
+
+The page may serve several people from one process, so every piece of Search state
+lives inside `search_page`, one copy per browser tab. Nothing here is module-level state.
+"""
+from dataclasses import dataclass
+
+from loguru import logger
+from nicegui import run, ui
+
+from craigslist import lookup
+from craigslist.chart import chart_options, empty_message, status_text
+from craigslist.listings import ListingSourceError, OwnerType
+from craigslist.search import Search, SearchError, SearchResult, run_live_search
+
+HOST = "127.0.0.1"
+"""Local only until the Linode ticket adds a --host flag."""
+PORT = 8080
+TITLE = "Craigslist car prices"
+
+
+@dataclass
+class SearchForm:
+    """What the toolbar currently holds, and whether it makes a Search."""
+
+    state: str | None = None
+    city: str | None = None
+    make: str | None = None
+    model: str | None = None
+    owner: bool = True
+    dealer: bool = True
+
+    def choose_state(self, state: str | None) -> None:
+        self.state = state
+        self.city = None
+
+    def choose_make(self, make: str | None) -> None:
+        self.make = make
+        self.model = None
+
+    def city_options(self) -> list[str]:
+        return [city.name for city in lookup.cities(self.state)] if self.state else []
+
+    def model_options(self) -> list[str]:
+        return lookup.models(self.make) if self.make else []
+
+    def problem(self) -> str | None:
+        """Why Search is disabled, or None when it can run."""
+        if not (self.state and self.city and self.make and self.model):
+            return "Pick a state, city, make, and model"
+        if not (self.owner or self.dealer):
+            return "Pick owner, dealer, or both"
+        return None
+
+    def search(self) -> Search:
+        assert self.state and self.city and self.make and self.model, self.problem()
+        owner_types = tuple(
+            owner_type
+            for owner_type, checked in ((OwnerType.OWNER, self.owner), (OwnerType.DEALER, self.dealer))
+            if checked
+        )
+        return Search(self.state, self.city, self.make, self.model, owner_types)
+
+
+def search_page() -> None:
+    """Build one Search page for one browser tab."""
+    form = SearchForm()
+    running = False
+
+    def refresh_search_button() -> None:
+        problem = form.problem()
+        search_button.set_enabled(problem is None and not running)
+        hint.set_text(problem or "")
+
+    def state_changed(state: str | None) -> None:
+        form.choose_state(state)
+        city_select.set_options(form.city_options(), value=None)
+        refresh_search_button()
+
+    def city_changed(city: str | None) -> None:
+        form.city = city
+        refresh_search_button()
+
+    def make_changed(make: str | None) -> None:
+        form.choose_make(make)
+        model_select.set_options(form.model_options(), value=None)
+        refresh_search_button()
+
+    def model_changed(model: str | None) -> None:
+        form.model = model
+        refresh_search_button()
+
+    def owner_changed(checked: bool) -> None:
+        form.owner = checked
+        refresh_search_button()
+
+    def dealer_changed(checked: bool) -> None:
+        form.dealer = checked
+        refresh_search_button()
+
+    async def search_clicked() -> None:
+        nonlocal running
+        search = form.search()
+        running = True
+        refresh_search_button()
+        status.set_text(f"Searching Craigslist for {search.make} {search.model} in {search.city}...")
+        try:
+            result = await run.io_bound(run_live_search, search)
+        except (SearchError, ListingSourceError) as error:
+            logger.warning("Search {} failed: {}", search, error)
+            chart.set_visibility(False)
+            empty_label.set_visibility(False)
+            status.set_text(f"Search failed: {error}")
+            return
+        finally:
+            running = False
+            refresh_search_button()
+        if result is None:  # cancelled, or the app is shutting down
+            return
+        show(search, result)
+
+    def show(search: Search, result: SearchResult) -> None:
+        message = empty_message(search, result)
+        chart.set_visibility(message is None)
+        empty_label.set_visibility(message is not None)
+        if message is None:
+            chart.options.clear()
+            chart.options.update(chart_options(search, result))
+            chart.update()
+        else:
+            empty_label.set_text(message)
+        status.set_text(status_text(search, result))
+
+    # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
+    with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
+        with ui.row().classes("w-full items-center gap-3"):
+            ui.select(lookup.states(), label="State", with_input=True, on_change=lambda e: state_changed(e.value)).classes("w-24")
+            city_select = ui.select([], label="City", with_input=True, on_change=lambda e: city_changed(e.value)).classes("w-56")
+            ui.select(lookup.makes(), label="Make", with_input=True, on_change=lambda e: make_changed(e.value)).classes("w-44")
+            model_select = ui.select([], label="Model", with_input=True, on_change=lambda e: model_changed(e.value)).classes("w-44")
+            ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
+            ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
+            search_button = ui.button("Search", on_click=search_clicked)
+            hint = ui.label().classes("text-sm opacity-70")
+        with ui.row().classes("w-full grow gap-4 no-wrap"):
+            with ui.column().classes("grow h-full items-center justify-center"):
+                chart = ui.echart({}).classes("w-full h-full")
+                chart.set_visibility(False)
+                empty_label = ui.label().classes("text-lg opacity-70")
+                empty_label.set_visibility(False)
+            ui.column().classes("w-80 h-full border rounded")  # Preview panel, a later ticket
+        status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
+    refresh_search_button()
+
+
+def serve(port: int = PORT) -> None:
+    """Serve the Search page until interrupted. Light or dark follows the browser."""
+    logger.info("Search page on http://{}:{}", HOST, port)
+    ui.run(search_page, host=HOST, port=port, title=TITLE, dark=None, reload=False)

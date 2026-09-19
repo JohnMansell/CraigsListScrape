@@ -230,9 +230,11 @@ def parse_full(text: str, owner_type: OwnerType) -> FullPage:
     code names the other owner type: the owner filter would then be broken."""
     body = _data(text)
     items = _require(body, "items", list)
-    decode = _require(body, "decode", dict)
-    min_posting_id = _require(decode, "minPostingId", int)
-    listings = []
+    listings: list[Listing] = []
+    min_posting_id = 0
+    if items:  # With no results, `decode` is 0 rather than an object.
+        decode = _require(body, "decode", dict)
+        min_posting_id = _require(decode, "minPostingId", int)
     for item in items:
         if not isinstance(item, list) or len(item) < 3:
             logger.warning("{}: skipping unreadable result {!r}", API_NAME, item)
