@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from craigslist import lookup
 from craigslist.curve import NotEnoughData, PriceCurve, fit_price_curve
-from craigslist.listings import Fetch, Listing, OwnerType, Search as ListingSearch, search_listings
+from craigslist.listings import Fetch, HttpFetcher, Listing, OwnerType, Search as ListingSearch, search_listings
 
 
 Progress = Callable[[], None]
@@ -52,6 +52,17 @@ def run_search(search: Search, fetch: Fetch, progress: Progress | None = None) -
         for owner_type in search.owner_types
     }
     return SearchResult(source_result.listings, curves, source_result.reported_totals)
+
+
+def run_live_search(search: Search, fetch: Fetch | None = None) -> SearchResult:
+    """Run `search` with `fetch`, or with a live HttpFetcher that is closed afterwards."""
+    if fetch is not None:
+        return run_search(search, fetch)
+    http = HttpFetcher()
+    try:
+        return run_search(search, http)
+    finally:
+        http.close()
 
 
 def _listing_search(search: Search) -> ListingSearch:

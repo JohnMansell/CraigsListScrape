@@ -214,6 +214,14 @@ def test_duplicate_image_codes_are_collapsed_in_order():
     )
 
 
+def test_search_with_no_results_parses_although_decode_is_zero():
+    # A live search with no results answers "decode": 0 instead of an object.
+    page = parse_full('{"data": {"items": [], "totalResultCount": 0, "cacheTs": 1, "decode": 0}}', OwnerType.OWNER)
+
+    assert page.listings == []
+    assert page.result_count == page.reported_total == 0
+
+
 def test_response_missing_items_raises_an_error_naming_the_api():
     with pytest.raises(ListingSourceError, match="Craigslist search API.*items"):
         parse_full('{"data": {"totalResultCount": 3, "cacheTs": 1, "decode": {"minPostingId": 1}}}', OwnerType.OWNER)

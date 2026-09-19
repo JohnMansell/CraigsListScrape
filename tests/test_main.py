@@ -19,11 +19,25 @@ def run_entry_point(*args: str, log_dir: Path) -> subprocess.CompletedProcess[st
     )
 
 
-def test_entry_point_at_debug_level_exits_cleanly_and_writes_debug_lines(tmp_path):
-    result = run_entry_point("--log", "DEBUG", log_dir=tmp_path)
+def test_entry_point_without_a_command_serves_the_search_page_and_logs_at_debug_level(tmp_path, monkeypatch):
+    from craigslist import page
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+    served: list[int] = []
+    monkeypatch.setattr(page, "serve", lambda port=page.PORT: served.append(port))
+
+    main(["--log", "DEBUG"])
+
+    assert served == [8080]
+    assert "DEBUG" in (tmp_path / "craigslist.log").read_text()
+
+
+def test_entry_point_runs_as_a_module(tmp_path):
+    result = run_entry_point("--help", log_dir=tmp_path)
 
     assert result.returncode == 0, result.stderr
-    assert "DEBUG" in (tmp_path / "craigslist.log").read_text()
+    assert "listings" in result.stdout
 
 
 def test_listings_command_prints_each_listing_count_and_curve_coefficients(tmp_path, monkeypatch, capsys):

@@ -7,7 +7,7 @@ import pytest
 from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist import listings
 from craigslist.listings import OwnerType
-from craigslist.search import Search, SearchError, run_search
+from craigslist.search import Search, SearchError, run_live_search, run_search
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -104,3 +104,11 @@ def test_run_search_reports_every_paged_api_request(monkeypatch):
     )
 
     assert progress == [None, None, None, None]
+
+
+def test_run_live_search_uses_the_given_fetcher():
+    dealer_full = fixture("dealer_full.json")
+
+    result = run_live_search(Search("CA", "Orange County", "honda", "civic", (OwnerType.DEALER,)), lambda url: dealer_full)
+
+    assert {listing.owner_type for listing in result.listings} == {OwnerType.DEALER}
