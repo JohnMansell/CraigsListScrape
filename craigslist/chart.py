@@ -2,6 +2,7 @@
 
 Plain dictionaries only, so the chart can be tested without a browser.
 """
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any
 
@@ -107,6 +108,12 @@ def empty_message(search: Search, result: SearchResult) -> str | None:
     if all(listing.mileage is None for listing in result.listings):
         return f"None of the {len(result.listings)} {car} listings in {search.city} have mileage."
     return None
+
+
+def unfetched_message(fetched: Search, wanted: Collection[OwnerType]) -> str | None:
+    """"Search again to load dealer listings" when a wanted owner type was not fetched, else None."""
+    missing = [NAMES[t].lower() for t in wanted if t not in fetched.owner_types]
+    return f"Search again to load {' and '.join(missing)} listings" if missing else None
 
 
 def status_text(search: Search, result: SearchResult) -> str:
