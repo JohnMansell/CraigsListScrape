@@ -17,15 +17,12 @@ AXIS_COLOR = "#8a8a8a"
 
 PADDING = 0.05
 """Share of the kept range added on each side of the default view."""
-ARROW_SIZE = 10
+POINT_SIZE = 12
+"""Big enough to hover and click easily; the Preview panel shows the details, so no tooltip."""
+ARROW_SIZE = 14
 PIN_COLOR = "#d62728"
-PIN_SIZE = 18
+PIN_SIZE = 24
 PIN_NAME = "Pinned listing"
-TOOLTIP_FORMATTER = (
-    "(p) => { const v = p.data.actual || p.value;"
-    " return p.seriesName + '<br/>' + v[0].toLocaleString() + ' mi<br/>$' + v[1].toLocaleString(); }"
-)
-"""Shows the real mileage and price, also for an arrow drawn at the chart edge."""
 
 COLORS = {OwnerType.OWNER: OWNER_COLOR, OwnerType.DEALER: DEALER_COLOR}
 NAMES = {OwnerType.OWNER: "Owner", OwnerType.DEALER: "Dealer"}
@@ -66,7 +63,6 @@ def chart_options(search: Search, result: SearchResult, pinned_id: int | None = 
         "textStyle": {"color": AXIS_COLOR},
         "grid": {"left": 70, "right": 30, "top": 40, "bottom": 50},
         "legend": {"top": 0, "data": legend, "textStyle": {"color": AXIS_COLOR}},
-        "tooltip": {"trigger": "item"},
         "toolbox": {"right": 10, "feature": {"dataZoom": {"filterMode": "none"}, "restore": {}}},
         "xAxis": _axis("Mileage", name_gap=35, limits=(view.min_miles, view.max_miles) if view else None),
         "yAxis": _axis("Price ($)", name_gap=55, limits=(view.min_price, view.max_price) if view else None),
@@ -202,9 +198,8 @@ def _points(owner_type: OwnerType, result: SearchResult, view: ChartRange | None
     return {
         "name": NAMES[owner_type],
         "type": "scatter",
-        "symbolSize": 7,
+        "symbolSize": POINT_SIZE,
         "itemStyle": item_style,
-        "tooltip": {":formatter": TOOLTIP_FORMATTER},
         "data": [
             (view and _edge_point(listing.mileage, listing.price, view)) or [listing.mileage, listing.price]
             for listing in result.listings
@@ -229,7 +224,6 @@ def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pin
         "symbol": "circle",
         "symbolSize": PIN_SIZE,
         "itemStyle": {"color": "transparent", "borderColor": PIN_COLOR, "borderWidth": 2.5},
-        "tooltip": {"show": False},
         "data": data,
     }
 
@@ -257,4 +251,11 @@ def _axis(name: str, name_gap: int, limits: tuple[float, float] | None) -> dict[
         "scale": True,
         "axisLine": {"lineStyle": {"color": AXIS_COLOR}},
         "splitLine": {"lineStyle": {"color": AXIS_COLOR, "opacity": 0.2}},
+        # A line from the cursor to this axis, labelled with the value there.
+        "axisPointer": {
+            "show": True,
+            "snap": False,
+            "lineStyle": {"color": AXIS_COLOR, "type": "dashed"},
+            "label": {"show": True, "precision": 0},
+        },
     }

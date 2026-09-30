@@ -247,3 +247,16 @@ def test_a_pinned_listing_without_mileage_gets_no_ring():
     result = SearchResult([listing(1, OwnerType.OWNER, None)], {}, {})
 
     assert chart_options(SEARCH, result, pinned_id=1)["series"][-1]["data"] == []
+
+
+def test_points_have_no_tooltip_and_the_cursor_draws_a_line_to_each_axis():
+    result = SearchResult([listing(1, OwnerType.OWNER, 50_000, 12_000)], {}, {OwnerType.OWNER: 1})
+
+    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,)), result)
+
+    assert "tooltip" not in options
+    assert all("tooltip" not in series for series in options["series"])
+    assert series_named(options, "Owner")["symbolSize"] >= 12
+    for axis in (options["xAxis"], options["yAxis"]):
+        assert axis["axisPointer"]["show"] is True
+        assert axis["axisPointer"]["label"]["show"] is True
