@@ -2,9 +2,10 @@
 
 Plain dictionaries only, so the chart can be tested without a browser.
 """
+from dataclasses import dataclass
 from typing import Any
 
-from craigslist.curve import PriceCurve
+from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist.listings import OwnerType
 from craigslist.search import Search, SearchResult
 
@@ -13,18 +14,40 @@ DEALER_COLOR = "#e8743b"
 AXIS_COLOR = "#8a8a8a"
 """Mid grey, readable in light and dark mode."""
 
+PADDING = 0.05
+"""Share of the kept range added on each side of the default view."""
+ARROW_SIZE = 10
+TOOLTIP_FORMATTER = (
+    "(p) => { const v = p.data.actual || p.value;"
+    " return p.seriesName + '<br/>' + v[0].toLocaleString() + ' mi<br/>$' + v[1].toLocaleString(); }"
+)
+"""Shows the real mileage and price, also for an arrow drawn at the chart edge."""
+
 COLORS = {OwnerType.OWNER: OWNER_COLOR, OwnerType.DEALER: DEALER_COLOR}
 NAMES = {OwnerType.OWNER: "Owner", OwnerType.DEALER: "Dealer"}
+
+
+@dataclass(frozen=True)
+class ChartRange:
+    """The axis limits of the default view."""
+
+    min_miles: float
+    max_miles: float
+    min_price: float
+    max_price: float
 
 
 def chart_options(search: Search, result: SearchResult) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
-    Listings without mileage are left off.
+    Listings without mileage are left off. The axes fit the points the curves kept, so a
+    price outlier does not squash the rest; points outside are drawn as arrows at the edge.
+    Dragging on the chart zooms, and the toolbox restores the default view.
     """
+    view = default_range(search, result)
     series: list[dict[str, Any]] = []
     for owner_type in search.owner_types:
-        series.append(_points(owner_type, result))
+        series.append(_points(owner_type, result, view))
     for owner_type in search.owner_types:
         curve = result.curves.get(owner_type)
         if isinstance(curve, PriceCurve):
@@ -35,10 +58,43 @@ def chart_options(search: Search, result: SearchResult) -> dict[str, Any]:
         "textStyle": {"color": AXIS_COLOR},
         "grid": {"left": 70, "right": 30, "top": 40, "bottom": 50},
         "legend": {"top": 0, "textStyle": {"color": AXIS_COLOR}},
-        "xAxis": _axis("Mileage", name_gap=35),
-        "yAxis": _axis("Price ($)", name_gap=55),
+        "tooltip": {"trigger": "item"},
+        "toolbox": {"right": 10, "feature": {"dataZoom": {"filterMode": "none"}, "restore": {}}},
+        "xAxis": _axis("Mileage", name_gap=35, limits=(view.min_miles, view.max_miles) if view else None),
+        "yAxis": _axis("Price ($)", name_gap=55, limits=(view.min_price, view.max_price) if view else None),
         "series": series,
     }
+
+
+def default_range(search: Search, result: SearchResult) -> ChartRange | None:
+    """The default view: the points every shown curve kept, padded, or None with no points.
+
+    An owner type with no fitted curve has no kept points, so all its plottable points count.
+    """
+    miles: list[float] = []
+    prices: list[float] = []
+    for owner_type in search.owner_types:
+        curve = result.curves.get(owner_type)
+        if isinstance(curve, PriceCurve):
+            miles += [curve.min_miles, curve.max_miles]
+            prices += [curve.min_price, curve.max_price]
+            continue
+        for listing in result.listings:
+            if listing.owner_type == owner_type and listing.mileage is not None:
+                miles.append(listing.mileage)
+                prices.append(listing.price)
+    if not miles:
+        return None
+    return ChartRange(*_padded(miles), *_padded(prices))
+
+
+def curve_notes(search: Search, result: SearchResult) -> list[str]:
+    """One note for each searched owner type whose points were too few for a curve."""
+    return [
+        f"Too few {owner_type} listings for a curve"
+        for owner_type in search.owner_types
+        if isinstance(result.curves.get(owner_type), NotEnoughData)
+    ]
 
 
 def empty_message(search: Search, result: SearchResult) -> str | None:
@@ -78,7 +134,36 @@ def failure_banner(result: SearchResult) -> str | None:
     )
 
 
-def _points(owner_type: OwnerType, result: SearchResult) -> dict[str, Any]:
+def _padded(values: list[float]) -> tuple[float, float]:
+    low, high = min(values), max(values)
+    pad = (high - low) * PADDING or max(abs(high) * PADDING, 1.0)
+    return max(0.0, low - pad), high + pad
+
+
+def _edge_point(miles: float, price: float, view: ChartRange) -> dict[str, Any] | None:
+    """An arrow at the chart edge for a point outside `view`, else None."""
+    x = min(max(miles, view.min_miles), view.max_miles)
+    y = min(max(price, view.min_price), view.max_price)
+    if (x, y) == (miles, price):
+        return None
+    if price > view.max_price:
+        rotation = 0
+    elif price < view.min_price:
+        rotation = 180
+    elif miles > view.max_miles:
+        rotation = -90
+    else:
+        rotation = 90
+    return {
+        "value": [x, y],
+        "actual": [miles, price],
+        "symbol": "arrow",
+        "symbolSize": ARROW_SIZE,
+        "symbolRotate": rotation,
+    }
+
+
+def _points(owner_type: OwnerType, result: SearchResult, view: ChartRange | None) -> dict[str, Any]:
     color = COLORS[owner_type]
     item_style: dict[str, Any]
     if owner_type == OwnerType.OWNER:
@@ -90,8 +175,9 @@ def _points(owner_type: OwnerType, result: SearchResult) -> dict[str, Any]:
         "type": "scatter",
         "symbolSize": 7,
         "itemStyle": item_style,
+        "tooltip": {":formatter": TOOLTIP_FORMATTER},
         "data": [
-            [listing.mileage, listing.price]
+            (view and _edge_point(listing.mileage, listing.price, view)) or [listing.mileage, listing.price]
             for listing in result.listings
             if listing.owner_type == owner_type and listing.mileage is not None
         ],
@@ -110,8 +196,10 @@ def _curve(owner_type: OwnerType, curve: PriceCurve) -> dict[str, Any]:
     }
 
 
-def _axis(name: str, name_gap: int) -> dict[str, Any]:
+def _axis(name: str, name_gap: int, limits: tuple[float, float] | None) -> dict[str, Any]:
+    fixed = {} if limits is None else {"min": limits[0], "max": limits[1]}
     return {
+        **fixed,
         "type": "value",
         "name": name,
         "nameLocation": "middle",

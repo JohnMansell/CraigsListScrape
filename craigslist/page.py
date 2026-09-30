@@ -11,7 +11,7 @@ from loguru import logger
 from nicegui import run, ui
 
 from craigslist import lookup
-from craigslist.chart import chart_options, empty_message, failure_banner, progress_text, status_text
+from craigslist.chart import chart_options, curve_notes, empty_message, failure_banner, progress_text, status_text
 from craigslist.listings import Listing, OwnerType
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 
@@ -145,6 +145,8 @@ def search_page() -> None:
         refresh_search_button()
         banner.set_visibility(False)
         chart.set_visibility(False)
+        reset_button.set_visibility(False)
+        curve_note.set_visibility(False)
         empty_label.set_visibility(False)
         status.set_text(f"Searching Craigslist for {search.make} {search.model} in {search.city}...")
         timer.activate()
@@ -162,6 +164,16 @@ def search_page() -> None:
             return
         show(search, result, final=True)
 
+    def arm_drag_zoom() -> None:
+        """Make a plain drag on the chart select a region to zoom into."""
+        chart.run_chart_method(
+            "dispatchAction", {"type": "takeGlobalCursor", "key": "dataZoomSelect", "dataZoomSelectActive": True}
+        )
+
+    def reset_zoom() -> None:
+        chart.run_chart_method("dispatchAction", {"type": "restore"})
+        arm_drag_zoom()
+
     def show(search: Search, result: SearchResult, final: bool) -> None:
         message = empty_message(search, result) if final else None
         chart.set_visibility(message is None and bool(result.listings))
@@ -172,6 +184,11 @@ def search_page() -> None:
             chart.options.clear()
             chart.options.update(chart_options(search, result))
             chart.update()
+            arm_drag_zoom()
+        reset_button.set_visibility(chart.visible)
+        notes = curve_notes(search, result) if final else []
+        curve_note.set_visibility(bool(notes))
+        curve_note.set_text(". ".join(notes))
         text = failure_banner(result)
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
@@ -194,6 +211,11 @@ def search_page() -> None:
             with ui.column().classes("grow h-full items-center justify-center"):
                 chart = ui.echart({}).classes("w-full h-full")
                 chart.set_visibility(False)
+                with ui.row().classes("items-center gap-3"):
+                    reset_button = ui.button("Reset zoom", on_click=reset_zoom).props("flat dense")
+                    reset_button.set_visibility(False)
+                    curve_note = ui.label().classes("text-sm opacity-70")
+                    curve_note.set_visibility(False)
                 empty_label = ui.label().classes("text-lg opacity-70")
                 empty_label.set_visibility(False)
             ui.column().classes("w-80 h-full border rounded")  # Preview panel, a later ticket
