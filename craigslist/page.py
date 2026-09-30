@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 
 from loguru import logger
 from nicegui import app, run, ui
+from nicegui.events import EChartPointClickEventArguments, GenericEventArguments
 from starlette.requests import Request
 
 from craigslist import lookup
@@ -22,11 +23,20 @@ from craigslist.chart import (
     curve_notes,
     empty_message,
     failure_banner,
+    plotted_listings,
     progress_text,
     status_text,
     unfetched_message,
 )
 from craigslist.listings import Listing, OwnerType
+from craigslist.preview import (
+    IDLE_TEXT,
+    detail_lines,
+    load_details,
+    no_mileage_listings,
+    no_mileage_note,
+    preview_content,
+)
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 
 HOST = "127.0.0.1"
@@ -154,6 +164,15 @@ def search_page(request: Request) -> None:
     """Batches the worker thread hands to the page. Only the timer touches the UI."""
     live: list[Listing] = []
     live_search: Search | None = None
+    shown_search: Search | None = None
+    shown_result: SearchResult | None = None
+    """What the chart currently draws, for mapping chart events back to Listings."""
+    hovered: Listing | None = None
+    pinned: Listing | None = None
+    pinned_details: dict[str, str] | None = None
+    """None while the Pinned Listing's details load."""
+    list_mode = False
+    """The panel lists the Listings with no mileage, until one is pinned."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -222,8 +241,103 @@ def search_page(request: Request) -> None:
         if new and live_search is not None:
             show(live_search, SearchResult(list(live), {}, {}), final=False)
 
+    def draw_preview() -> None:
+        """Show the hovered Listing, else the no-mileage list, else the Pinned Listing."""
+        preview.clear()
+        with preview:
+            if hovered is not None:
+                draw_listing(hovered)
+            elif list_mode and shown_search is not None and shown_result is not None:
+                draw_no_mileage_list(no_mileage_listings(shown_search, shown_result))
+            elif pinned is not None:
+                draw_listing(pinned)
+            else:
+                ui.label(IDLE_TEXT).classes("text-sm opacity-70")
+
+    def draw_listing(listing: Listing) -> None:
+        content = preview_content(listing)
+        if content.image:
+            ui.image(content.image).classes("w-full rounded")
+        ui.label(content.title).classes("font-bold")
+        ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
+        ui.label(content.owner)
+        for line in (content.posted, content.location):
+            if line:
+                ui.label(line).classes("text-sm opacity-70")
+        ui.button("Open on Craigslist").props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+        if listing is pinned:
+            lines = detail_lines(pinned_details)
+            if isinstance(lines, str):
+                ui.label(lines).classes("text-sm opacity-70")
+            else:
+                for line in lines:
+                    ui.label(line).classes("text-sm")
+
+    def draw_no_mileage_list(listings: list[Listing]) -> None:
+        ui.label(no_mileage_note(len(listings)) or "").classes("font-bold")
+        with ui.scroll_area().classes("w-full grow"):
+            for listing in listings:
+                ui.item(f"${listing.price:,}  {listing.title}", on_click=lambda _, item=listing: pin(item)).classes("text-sm")
+
+    def point_listing(args: Mapping[str, object]) -> Listing | None:
+        """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
+        if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
+            return None
+        rows = plotted_listings(shown_search, shown_result).get(str(args.get("seriesName")))
+        index = args.get("dataIndex")
+        if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
+            return None
+        return rows[index]
+
+    def point_hovered(event: GenericEventArguments) -> None:
+        nonlocal hovered
+        listing = point_listing(event.args)
+        if listing is not None and listing is not hovered:
+            hovered = listing
+            draw_preview()
+
+    def hover_ended(_: GenericEventArguments) -> None:
+        nonlocal hovered
+        if hovered is not None:
+            hovered = None
+            draw_preview()
+
+    async def point_clicked(event: EChartPointClickEventArguments) -> None:
+        listing = point_listing(
+            {"seriesType": event.series_type, "seriesName": event.series_name, "dataIndex": event.data_index}
+        )
+        if listing is not None:
+            await pin(listing)
+
+    async def pin(listing: Listing) -> None:
+        """Make `listing` the Pinned Listing, ring it, and load its details off the UI thread."""
+        nonlocal pinned, pinned_details, list_mode
+        pinned, pinned_details, list_mode = listing, None, False
+        draw_preview()
+        redraw_pin()
+        try:
+            details = await run.io_bound(load_details, listing)
+        except Exception as error:  # a failed detail fetch must not break the page
+            logger.warning("Details for {} failed: {}", listing.url, error)
+            details = {}
+        if pinned is listing:  # not replaced while the fetch ran
+            pinned_details = details
+            draw_preview()
+
+    def redraw_pin() -> None:
+        """Move the ring to the Pinned Listing without redrawing the points."""
+        if shown_search is not None and shown_result is not None and chart.visible:
+            chart.options.clear()
+            chart.options.update(chart_options(shown_search, shown_result, pinned.post_id if pinned else None))
+            chart.update()
+
+    def no_mileage_clicked() -> None:
+        nonlocal list_mode
+        list_mode = True
+        draw_preview()
+
     async def search_clicked() -> None:
-        nonlocal running, cancelling, stop, live_search, current
+        nonlocal running, cancelling, stop, live_search, current, hovered, pinned, pinned_details, list_mode
         if running:
             cancelling = True
             stop.set()
@@ -235,6 +349,9 @@ def search_page(request: Request) -> None:
         stop = threading.Event()
         live.clear()
         live_search = search
+        hovered = pinned = pinned_details = None
+        list_mode = False
+        draw_preview()
         while not arrived.empty():
             arrived.get_nowait()
         running, cancelling = True, False
@@ -273,8 +390,10 @@ def search_page(request: Request) -> None:
 
     def show(fetched: Search, result: SearchResult, final: bool) -> None:
         """Draw `result`, limited to the fetched owner types that are checked now."""
+        nonlocal shown_search, shown_result
         wanted = {OwnerType.OWNER: form.owner, OwnerType.DEALER: form.dealer}
         search = replace(fetched, owner_types=tuple(t for t in fetched.owner_types if wanted[t]))
+        shown_search, shown_result = search, result
         missing = unfetched_message(fetched, [t for t, checked in wanted.items() if checked])
         message = empty_message(search, result) if final else None
         if not search.owner_types:
@@ -286,10 +405,15 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result))
+            chart.options.update(chart_options(search, result, pinned.post_id if pinned else None))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
+        no_mileage = no_mileage_note(len(no_mileage_listings(search, result)))
+        no_mileage_label.set_visibility(no_mileage is not None)
+        no_mileage_label.set_text(no_mileage or "")
+        if list_mode:
+            draw_preview()
         notes = curve_notes(search, result) if final else []
         if missing and final:
             notes.append(missing)
@@ -316,17 +440,23 @@ def search_page(request: Request) -> None:
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):
             with ui.column().classes("grow h-full items-center justify-center"):
-                chart = ui.echart({}).classes("w-full h-full")
+                chart = ui.echart({}, on_point_click=point_clicked).classes("w-full h-full")
                 chart.set_visibility(False)
                 with ui.row().classes("items-center gap-3"):
                     reset_button = ui.button("Reset zoom", on_click=reset_zoom).props("flat dense")
                     reset_button.set_visibility(False)
                     curve_note = ui.label().classes("text-sm opacity-70")
                     curve_note.set_visibility(False)
+                    no_mileage_label = ui.label().classes("text-sm underline cursor-pointer")
+                    no_mileage_label.on("click", no_mileage_clicked)
+                    no_mileage_label.set_visibility(False)
                 empty_label = ui.label().classes("text-lg opacity-70")
                 empty_label.set_visibility(False)
-            ui.column().classes("w-80 h-full border rounded")  # Preview panel, a later ticket
+            preview = ui.column().classes("w-80 h-full border rounded p-2 gap-1 overflow-auto")
         status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
+    chart.on("chart:mouseover", point_hovered, ["seriesType", "seriesName", "dataIndex"])
+    chart.on("chart:globalout", hover_ended, [])
+    draw_preview()
     timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
     refresh_search_button()
     if from_link and form.problem() is None:

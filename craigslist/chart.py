@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from craigslist.curve import NotEnoughData, PriceCurve
-from craigslist.listings import OwnerType
+from craigslist.listings import Listing, OwnerType
 from craigslist.search import Search, SearchResult
 
 OWNER_COLOR = "#2f7ed8"
@@ -18,6 +18,9 @@ AXIS_COLOR = "#8a8a8a"
 PADDING = 0.05
 """Share of the kept range added on each side of the default view."""
 ARROW_SIZE = 10
+PIN_COLOR = "#d62728"
+PIN_SIZE = 18
+PIN_NAME = "Pinned listing"
 TOOLTIP_FORMATTER = (
     "(p) => { const v = p.data.actual || p.value;"
     " return p.seriesName + '<br/>' + v[0].toLocaleString() + ' mi<br/>$' + v[1].toLocaleString(); }"
@@ -38,12 +41,14 @@ class ChartRange:
     max_price: float
 
 
-def chart_options(search: Search, result: SearchResult) -> dict[str, Any]:
+def chart_options(search: Search, result: SearchResult, pinned_id: int | None = None) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
     Listings without mileage are left off. The axes fit the points the curves kept, so a
     price outlier does not squash the rest; points outside are drawn as arrows at the edge.
-    Dragging on the chart zooms, and the toolbox restores the default view.
+    Dragging on the chart zooms, and the toolbox restores the default view. The Pinned
+    Listing, when it is on the chart, is ringed by a last series that is always present
+    (empty when nothing is pinned), so pinning never changes the series count.
     """
     view = default_range(search, result)
     series: list[dict[str, Any]] = []
@@ -53,17 +58,34 @@ def chart_options(search: Search, result: SearchResult) -> dict[str, Any]:
         curve = result.curves.get(owner_type)
         if isinstance(curve, PriceCurve):
             series.append(_curve(owner_type, curve))
+    legend = [str(item["name"]) for item in series]
+    series.append(_pin_ring(search, result, view, pinned_id))
     return {
         "animation": False,
         "backgroundColor": "transparent",
         "textStyle": {"color": AXIS_COLOR},
         "grid": {"left": 70, "right": 30, "top": 40, "bottom": 50},
-        "legend": {"top": 0, "textStyle": {"color": AXIS_COLOR}},
+        "legend": {"top": 0, "data": legend, "textStyle": {"color": AXIS_COLOR}},
         "tooltip": {"trigger": "item"},
         "toolbox": {"right": 10, "feature": {"dataZoom": {"filterMode": "none"}, "restore": {}}},
         "xAxis": _axis("Mileage", name_gap=35, limits=(view.min_miles, view.max_miles) if view else None),
         "yAxis": _axis("Price ($)", name_gap=55, limits=(view.min_price, view.max_price) if view else None),
         "series": series,
+    }
+
+
+def plotted_listings(search: Search, result: SearchResult) -> dict[str, list[Listing]]:
+    """For each point series name, the Listings behind its points in data order.
+
+    A chart event gives a series name and a data index; this maps them back to a Listing.
+    """
+    return {
+        NAMES[owner_type]: [
+            listing
+            for listing in result.listings
+            if listing.owner_type == owner_type and listing.mileage is not None
+        ]
+        for owner_type in search.owner_types
     }
 
 
@@ -188,6 +210,27 @@ def _points(owner_type: OwnerType, result: SearchResult, view: ChartRange | None
             for listing in result.listings
             if listing.owner_type == owner_type and listing.mileage is not None
         ],
+    }
+
+
+def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pinned_id: int | None) -> dict[str, Any]:
+    """A hollow ring around the Pinned Listing's point, or no data when it is not plotted."""
+    data: list[list[float]] = []
+    for listings in plotted_listings(search, result).values():
+        for listing in listings:
+            if listing.post_id == pinned_id and listing.mileage is not None:
+                edge = view and _edge_point(listing.mileage, listing.price, view)
+                data.append(edge["value"] if edge else [listing.mileage, listing.price])
+    return {
+        "name": PIN_NAME,
+        "type": "scatter",
+        "silent": True,
+        "z": 10,
+        "symbol": "circle",
+        "symbolSize": PIN_SIZE,
+        "itemStyle": {"color": "transparent", "borderColor": PIN_COLOR, "borderWidth": 2.5},
+        "tooltip": {"show": False},
+        "data": data,
     }
 
 
