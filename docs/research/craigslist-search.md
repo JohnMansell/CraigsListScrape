@@ -109,7 +109,9 @@ In `"n:m~lat~lon"`, `n` indexes `data.decode.locations` and `m` indexes `data.de
 - `locations` entries are `[siteId, citySlug]` or `[siteId, citySlug, subareaSlug]`, for example `[103, "orangecounty"]` and `[7, "losangeles", "sfv"]`.
 - `locationDescriptions` is the seller-typed location text, typos included: "Highgrove", "West Covina", "foutain valley". Correct on 6 of 6 checked.
 
-`batch` items have no geo at all, so location is knowable for the first 360 results only.
+`batch` items have no geo and no posted offset, so location and posted time are not in them. Both are in `full` items, and the step 2 short form carries both for every result (checked against the saved fixtures: its `postedOffset` and geo agree with the `full` item for the same post, and its own `decode` has its own `minPostingId`, `minPostedDate` and `locationDescriptions`, which must be used for its items). The Listing source therefore takes posted time and location from `full` where it can and fills the rest from the short form; a post in neither has both as `None`. The saved short form is trimmed to the same 20 results as the `full` page, so the gap fill is tested with a shifted post id rather than a naturally batch-only post.
+
+Some geo strings use description index 0, which is not a string (there is no text), so the location is unknown.
 
 ### `totalResultCount` counts local results only
 

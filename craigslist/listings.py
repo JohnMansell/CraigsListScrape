@@ -16,7 +16,8 @@ import json
 import re
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from urllib.parse import urlencode, urlsplit
@@ -86,6 +87,10 @@ class Listing:
     image_codes: tuple[str, ...]
     """Deduplicated, in the listing's order. See `image_url` for the full URL."""
     owner_type: OwnerType
+    posted: datetime | None = None
+    """Timezone-aware UTC. None when the response does not carry it."""
+    location: str | None = None
+    """The seller-typed location text, typos included. None when the response does not carry it."""
 
 
 @dataclass(frozen=True)
@@ -149,13 +154,13 @@ def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> t
     if page.result_count >= FULL_PAGE_SIZE:
         cache = _read_cache(fetch(cache_url(search, owner_type, page.cache_ts)))
     if cache:
-        cache_id, max_posted_ts = cache
+        cache_id, max_posted_ts, details = cache
         for batch_number in range(MAX_BATCH_REQUESTS):
             offset = batch_number * BATCH_PAGE_SIZE
             batch = parse_batch(fetch(batch_url(offset, cache_id, max_posted_ts, page.cache_ts)), owner_type)
             # Batches restart from the first result, so they repeat the `full` page.
             for listing in batch.listings:
-                results.setdefault(listing.post_id, listing)
+                results.setdefault(listing.post_id, _with_details(listing, details))
             results_seen = max(results_seen, offset + batch.result_count)
             if batch.result_count < BATCH_PAGE_SIZE:
                 break
@@ -232,6 +237,7 @@ def parse_full(text: str, owner_type: OwnerType) -> FullPage:
     items = _require(body, "items", list)
     listings: list[Listing] = []
     min_posting_id = 0
+    decode: dict[str, Any] = {}
     if items:  # With no results, `decode` is 0 rather than an object.
         decode = _require(body, "decode", dict)
         min_posting_id = _require(decode, "minPostingId", int)
@@ -247,7 +253,8 @@ def parse_full(text: str, owner_type: OwnerType) -> FullPage:
             raise ListingSourceError(f"{API_NAME}: asked for {owner_type} listings, got {purveyor} listings")
         listing = _parse_result(item, item[-1], _tagged(item).get(TAG_IMAGES, []), min_posting_id, owner_type)
         if listing:
-            listings.append(listing)
+            posted, location = _posted_and_location(item, decode)
+            listings.append(replace(listing, posted=posted, location=location))
     return FullPage(
         listings, len(items), _require(body, "totalResultCount", int), _require(body, "cacheTs", int)
     )
@@ -300,6 +307,31 @@ def _parse_result(
     )
 
 
+def _posted_and_location(item: list[Any], decode: dict[str, Any]) -> tuple[datetime | None, str | None]:
+    """Posted time and location from a `full` or step-2 item: `[postIdOffset, postedOffset,
+    purveyor, price, "n:m~lat~lon", ...]`, decoded with that response's `decode` object.
+    Either is None when the item or `decode` does not carry it."""
+    posted = None
+    posted_offset, min_posted = item[1] if len(item) > 1 else None, decode.get("minPostedDate")
+    if isinstance(posted_offset, int) and isinstance(min_posted, int) and not isinstance(posted_offset, bool):
+        posted = datetime.fromtimestamp(min_posted + posted_offset, UTC)
+
+    location = None
+    geo = item[4] if len(item) > 4 else None
+    descriptions = decode.get("locationDescriptions")
+    match = re.match(r"\d+:(\d+)~", geo) if isinstance(geo, str) else None
+    if match and isinstance(descriptions, list) and int(match[1]) < len(descriptions):
+        description = descriptions[int(match[1])]
+        location = description.strip() or None if isinstance(description, str) else None
+    return posted, location
+
+
+def _with_details(listing: Listing, details: dict[int, tuple[datetime | None, str | None]]) -> Listing:
+    """Fill a Listing's missing posted time and location from the step-2 short form."""
+    posted, location = details.get(listing.post_id, (None, None))
+    return replace(listing, posted=listing.posted or posted, location=listing.location or location)
+
+
 def _tagged(item: list[Any]) -> dict[int, list[Any]]:
     """The [tag, value, ...] lists in a result, keyed by tag."""
     return {
@@ -321,13 +353,22 @@ def _price(text: Any) -> int | None:
     return int(digits) if digits else None
 
 
-def _read_cache(text: str) -> tuple[str, int] | None:
-    """The cache id and max posted time from a step-2 response, or None when the
-    response lists all the results itself, which it does when there are too few to page."""
+def _read_cache(text: str) -> tuple[str, int, dict[int, tuple[datetime | None, str | None]]] | None:
+    """The cache id, max posted time and per-post-id posted time and location from a
+    step-2 response, or None when the response lists all the results itself, which it does
+    when there are too few to page (the `full` page already has those)."""
     body = _data(text)
-    if "cacheId" not in body and len(_require(body, "items", list)) <= FULL_PAGE_SIZE:
+    items = _require(body, "items", list)
+    if "cacheId" not in body and len(items) <= FULL_PAGE_SIZE:
         return None
-    return _require(body, "cacheId", str), _require(body, "maxPostedTs", int)
+    details: dict[int, tuple[datetime | None, str | None]] = {}
+    decode = body.get("decode")
+    if items and isinstance(decode, dict):
+        min_posting_id = _require(decode, "minPostingId", int)
+        for item in items:
+            if isinstance(item, list) and item and isinstance(item[0], int):
+                details[min_posting_id + item[0]] = _posted_and_location(item, decode)
+    return _require(body, "cacheId", str), _require(body, "maxPostedTs", int), details
 
 
 def _data(text: str) -> dict[str, Any]:
