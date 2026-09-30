@@ -8,6 +8,7 @@ from craigslist.chart import (
     failure_banner,
     progress_text,
     status_text,
+    unfetched_message,
 )
 from craigslist.curve import CurvePoint, NotEnoughData, PriceCurve
 from craigslist.listings import Listing, ListingSourceError, OwnerType
@@ -203,3 +204,11 @@ def test_too_few_points_for_a_curve_gets_a_note_per_owner_type():
 
     assert curve_notes(SEARCH, result) == ["Too few owner listings for a curve"]
     assert curve_notes(SEARCH, SearchResult([], {}, {})) == []
+
+
+def test_a_type_that_was_not_fetched_gets_a_search_again_message():
+    fetched = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,))
+
+    assert unfetched_message(fetched, [OwnerType.OWNER, OwnerType.DEALER]) == "Search again to load dealer listings"
+    assert unfetched_message(fetched, [OwnerType.OWNER]) is None
+    assert unfetched_message(fetched, []) is None
