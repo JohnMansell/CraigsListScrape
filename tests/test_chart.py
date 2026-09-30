@@ -1,4 +1,5 @@
 from craigslist.chart import (
+    plotted_listings,
     DEALER_COLOR,
     OWNER_COLOR,
     chart_options,
@@ -76,7 +77,7 @@ def test_owner_types_not_searched_and_unfitted_curves_are_not_drawn():
 
     options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,)), result)
 
-    assert [series["name"] for series in options["series"]] == ["Owner"]
+    assert [series["name"] for series in options["series"]] == ["Owner", "Pinned listing"]
 
 
 def test_zero_results_give_a_message_naming_the_search():
@@ -212,3 +213,37 @@ def test_a_type_that_was_not_fetched_gets_a_search_again_message():
     assert unfetched_message(fetched, [OwnerType.OWNER, OwnerType.DEALER]) == "Search again to load dealer listings"
     assert unfetched_message(fetched, [OwnerType.OWNER]) is None
     assert unfetched_message(fetched, []) is None
+
+
+def test_plotted_listings_map_each_series_index_back_to_its_listing():
+    first, second, no_miles, dealer = (
+        listing(1, OwnerType.OWNER, 50_000),
+        listing(2, OwnerType.OWNER, 60_000),
+        listing(3, OwnerType.OWNER, None),
+        listing(4, OwnerType.DEALER, 80_000),
+    )
+    result = SearchResult([first, no_miles, second, dealer], {}, {})
+
+    plotted = plotted_listings(SEARCH, result)
+
+    assert plotted == {"Owner": [first, second], "Dealer": [dealer]}
+    assert series_named(chart_options(SEARCH, result), "Owner")["data"] == [[50_000, 10_000], [60_000, 10_000]]
+
+
+def test_the_pinned_listing_is_ringed_by_a_last_series_that_is_always_present():
+    pinned = listing(2, OwnerType.OWNER, 60_000, price=12_000)
+    result = SearchResult([listing(1, OwnerType.OWNER, 50_000), pinned], {}, {})
+
+    ringed = chart_options(SEARCH, result, pinned_id=2)
+    plain = chart_options(SEARCH, result)
+
+    assert ringed["series"][-1]["data"] == [[60_000, 12_000]]
+    assert plain["series"][-1]["data"] == []
+    assert len(ringed["series"]) == len(plain["series"])
+    assert "Pinned listing" not in ringed["legend"]["data"]
+
+
+def test_a_pinned_listing_without_mileage_gets_no_ring():
+    result = SearchResult([listing(1, OwnerType.OWNER, None)], {}, {})
+
+    assert chart_options(SEARCH, result, pinned_id=1)["series"][-1]["data"] == []
