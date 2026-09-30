@@ -1,64 +1,39 @@
 # AGENTS.md
 
-This file provides guidance to coding agents working in this repository.
-
 ## What this is
 
-A Dash web app that scrapes Craigslist car listings with headless Chrome (Selenium) and plots price vs. mileage, with an exponential-decay fit line per owner type. Hovering a point shows listing details and the thumbnail; clicking opens the listing.
-
-A from-scratch rebuild is in progress in the `craigslist/` package, tracked in GitHub issues #1 to #10 (NiceGUI + ECharts, httpx + selectolax, SQLite, scipy, loguru). It lives alongside the Dash app until issue #10 removes the old code.
+A NiceGUI web app that searches Craigslist car listings and plots price vs. mileage in ECharts, with an exponential-decay Price curve per owner type (owner filled, dealer hollow). Hovering a point shows the listing in the Preview panel; clicking pins it. Stack: NiceGUI + ECharts, httpx + selectolax, scipy, loguru. The code is the `craigslist/` package.
 
 ## Commands
 
-uv-managed, Python 3.14 (`.python-version`). Not an installable package: there is no build system. The Dash app runs `__init__.py` as a script; the rebuild runs as `python -m craigslist` from the repo root.
+uv-managed, Python 3.14 (`.python-version`). Not an installable package: there is no build system. The app runs as `python -m craigslist` from the repo root.
 
 ```
 uv sync                                  # create .venv from uv.lock
-uv run __init__.py                       # Dash dev server (debug=True), http://127.0.0.1:8050
-uv run __init__.py --log DEBUG
-uv run python -m craigslist              # rebuild: Search page, http://127.0.0.1:8080
+uv run python -m craigslist              # Search page, http://127.0.0.1:8080
 uv run python -m craigslist --log DEBUG
 uv run python -m craigslist listings --make honda --model civic   # live Search, prints Listings
 uv run python tests/fixtures/refresh.py  # re-fetch the saved API responses (hits Craigslist)
 uv run pytest                            # all tests
 uv run pytest tests/test_log.py          # one test file
-uv run --with mypy mypy --explicit-package-bases craigslist tests
+uv run --with mypy mypy craigslist tests
 uv add <pkg>                             # add a dependency (updates pyproject.toml and uv.lock)
 ```
 
-- Run from the repo root. Image downloads use the relative path `assets/car_images/`.
-- No Chrome install needed. Selenium Manager downloads Chrome for Testing and chromedriver into `~/.cache/selenium` on first launch.
-- Tests cover only the `craigslist/` rebuild; the Dash app has none. No test may touch the network (`tests/conftest.py` makes connecting fail). The Listing source tests use saved API responses in `tests/fixtures/`, trimmed to 20 results; the tests shrink the page sizes to 20 so those fixtures page like a large search. There is no lint config, and mypy is not a dependency.
-- The root `__init__.py` makes pytest and mypy treat the repo root as a package and import the Dash app. `tests/conftest.py` stops pytest doing that, and mypy needs `--explicit-package-bases`. Both workarounds go away with issue #10.
+- Run from the repo root.
+- No test may touch the network (`tests/conftest.py` makes connecting fail). The Listing source tests use saved API responses in `tests/fixtures/`, trimmed to 20 results; the tests shrink the page sizes to 20 so those fixtures page like a large search. There is no lint config, and mypy is not a dependency.
 - New code must not use star imports or do work at import time. Tests check for star imports, and that importing every module with stray command-line flags succeeds and creates no files or directories.
-- `scratch.py` and `scratch2.py` are old experiments. They import `webdriver_manager` and `bs4`, which are not dependencies.
 
 ## Architecture
 
-### Rebuild (`craigslist/`)
-
 - `__main__.py`: entry point. Parses `--log`, calls `configure_logging`, and runs the `listings` command, or with no command serves the Search page.
-- `page.py`: the NiceGUI Search page. `SearchForm` holds the toolbar values and the Search-enabled rules; `search_page` builds one page per browser tab and runs `search.run_live_search` in `run.io_bound`. All Search state lives inside `search_page`: the page will serve several people from one process, so nothing may be module-level. `serve` binds 127.0.0.1:8080, light or dark following the browser.
-- `chart.py`: ECharts option dicts from a `SearchResult` (owner filled, dealer hollow, a curve per owner type), plus the empty-chart message and status line. No NiceGUI import, so it tests without a browser.
-- `search.py`: `run_search(Search, fetch)` validates lookup values, then returns Listings and a Price curve per owner type (`curve.py`). `run_live_search` does the same with its own `HttpFetcher` when no fetch is given.
-- `listings.py`: Listing source. `search_listings(Search, fetch)` returns Listings from Craigslist's undocumented JSON search API (`sapi.craigslist.org`), one API search per owner type. `fetch(url) -> str` is passed in; `HttpFetcher` is the live one (User-Agent, 0.5 s pacing). Every Craigslist URL and response-layout guess lives here. Findings behind it: `docs/research/craigslist-search.md`.
+- `page.py`: the NiceGUI Search page. `SearchForm` holds the toolbar values and the Search-enabled rules; `SearchForm.from_query`/`to_query` map the URL to the controls. `search_page` builds one page per browser tab and runs `search.run_live_search` in `run.io_bound`, polling a queue every 0.25 s to draw each batch. All Search state lives inside `search_page`: the page serves several people from one process, so nothing may be module-level. `serve` binds 127.0.0.1:8080, light or dark following the browser.
+- `chart.py`: ECharts option dicts from a `SearchResult`, plus the empty-chart message and status line. Default axes fit the kept points (`PriceCurve.min_miles`..`max_price`), padded 5%; outliers become edge arrows carrying `actual`. Drag-zoom uses the ECharts toolbox `dataZoom`, armed by `dispatchAction` after each update. `curve_notes` gives the too-few-points notes. No NiceGUI import, so it tests without a browser.
+- `preview.py`: Preview panel content, built without NiceGUI, plus the no-mileage note and `load_details(listing, fetch)`. `page.py` wires chart hover, click and pin to it.
+- `search.py`: `run_search(Search, fetch, on_batch, should_stop)` validates lookup values, reports each API page's Listings as it arrives, then returns Listings and a Price curve per owner type (`curve.py`). A failed request or a stop returns the Listings that arrived, with `error` or `cancelled` set, instead of raising. `run_live_search` does the same with its own `HttpFetcher` when no fetch is given.
+- `listings.py`: Listing source. `search_listings(Search, fetch)` returns Listings (including `posted` and `location`, each `None` when unknown) from Craigslist's undocumented JSON search API (`sapi.craigslist.org`), one API search per owner type. `fetch(url) -> str` is passed in; `HttpFetcher` is the live one (User-Agent, 0.5 s pacing). Every Craigslist URL and response-layout guess lives here. Findings behind it: `docs/research/craigslist-search.md`.
 - `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
-- `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`, exported once from the `resources/` pickles; edit the CSVs to add a city or model. State and make lookups ignore case.
-
-### Dash app
-
-Import chain: `__init__.py` -> `layout_objects.py` -> `backend.py` -> `web_interface.py`. Every module imports `color_logging`.
-
-- `__init__.py`: the Dash app, page layout, and all callbacks. The main `on_click` callback calls `Backend.get_all_cars`, builds a `px.scatter`, then `Backend.solve_curves` adds `curve_fit` lines. The click-to-open-listing callback is clientside JS writing to a hidden `H1`.
-- `layout_objects.py`: component definitions, populated at import time from `Backend` (states, cities for `'CA'`, makes). It creates its own throwaway `dash.Dash` just to call `get_asset_url`.
-- `backend.py`: `Backend` loads pickled lookup tables from `resources/` and turns Selenium elements into `car_object` instances, returned as a DataFrame (columns = `car_object` attributes).
-- `web_interface.py`: `Web_Interface` owns the Chrome driver and all Craigslist HTML selectors (see Gotchas).
-
-### Data files in `resources/`
-
-- `df_cities.p`: DataFrame with `state`, `city`, `href` (the city's Craigslist base URL).
-- `df_make_model.p`: DataFrame with `make`, `model`.
-- `p_car_objects.p`: dict of posting id (numeric `data-pid` string) -> `backend.car_object`. It is a scrape cache: rewritten after every new car, and hits skip the detail-page fetch. Renaming or moving `car_object` breaks unpickling.
+- `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`; edit the CSVs to add a city or model. State and make lookups ignore case.
 
 ## Gotchas
 
@@ -68,36 +43,13 @@ Import chain: `__init__.py` -> `layout_objects.py` -> `backend.py` -> `web_inter
   - Step 2 (`full?batch=0-<cacheTs>-0-1-0`) has no `cacheId` when there are too few results to page.
   - A search with no results has `"decode": 0` instead of an object.
   - Results with no price are skipped and logged. No mileage gives `None`; no photos gives no image codes.
+- Remembered Searches use `app.storage.user`, keyed by browser cookie. The signing secret is generated into the gitignored `.nicegui/storage_secret`. A URL naming any part of a Search wins over the browser's memory, and a complete link auto-runs; a plain reload restores the controls without searching.
+- `logs/craigslist.log` is created only when the entry point configures logging.
 
-- Craigslist selectors, current as of 2026-09:
-  - Each listing is a `gallery-card`, with the title and link in `a.posting-title` and the price in `priceinfo`.
-  - The posting id is `data-pid` on the card's parent `div.cl-search-result`. Listing URLs no longer contain it.
-  - Detail pages list `key: value` lines in `attrgroup`. The odometer has thousands separators and can be empty.
-  - When scraping breaks, check these first. `get_car_objects` logs each failure and silently drops the car.
-- `on_click` crashes with `KeyError: 'miles'` when a search yields zero cars (empty DataFrame).
-- `color_logging.py` runs `argparse` on `sys.argv` at import time. Any importer (pytest, gunicorn, a REPL with extra args) fails on unrecognized arguments.
-- The Dash app logs to `logs/` in the repo (override with `CRAIGSLIST_LOGDIR`), created at import time. The rebuild writes `logs/craigslist.log` in the same directory, created only when the entry point configures logging.
-- `Backend()` launches Chrome in its constructor and never quits it. Both `layout_objects.py` and `__init__.py` create a `Backend`, so two browsers start. The Flask dev reloader (`debug=True`) can start more. chromedriver and Chrome can outlive a killed Python process, so check with `pgrep -fa selenium/chrom`.
-- Star imports carry names across modules: `os` reaches `backend.py`/`web_interface.py` through `from color_logging import *`, and `dash`/`dcc`/`html`/`dbc` reach `__init__.py` through `from layout_objects import *`. Removing an import from those modules breaks the others.
-- `get_all_cars` only scrapes `'owner'` listings. The dealer color and fit paths exist but get no data. `build_url` computes `owner` (`cto`/`ctd`) and never uses it.
-- Cars whose image resolves to `placeholder.png` are dropped entirely, not just left uncached.
-- `on_click` silently falls back to CA / Orange County / honda / civic when any dropdown is empty.
-- The graph callback reads `customdata` by position: `[url, image, attributes]`. Keep `custom_data=` in `on_click` in sync with `display_hover_data` and the clientside callback.
+## GitHub identity
 
-## GitHub accounts
-
-This is a **personal** repository owned by `JohnMansell`. GitHub CLI has both
-`JohnMansell` (personal) and `jmansell-hss` (work) authenticated in
-`~/.config/gh/hosts.yml`.
-
-- Use `gh-personal` for every GitHub CLI operation in this repository. It selects
-  the personal token without changing the globally active `gh` account.
-- Use `gh-work` only in repositories owned by Horizon Surgical Systems. Do not
-  run `gh auth switch`; another agent or terminal may be using the other account.
-- Git remotes use the SSH aliases `github-personal` and `github-work` from
-  `~/.ssh/config`. Do not replace an alias with plain `github.com`.
-- Before a GitHub write, verify the remote owner with `git remote -v`. Pass
-  `--repo JohnMansell/CraigsListScrape` when repository inference is ambiguous.
+- Account: personal (`JohnMansell`).
+- Git remote: `github-personal`.
 
 ## Agent skills
 
