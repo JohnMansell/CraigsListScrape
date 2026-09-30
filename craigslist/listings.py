@@ -99,6 +99,13 @@ class SearchResults:
     reported_totals: dict[OwnerType, int]
     """The API's `totalResultCount` per owner type. It counts local results only, so
     dealer searches often return more Listings than this."""
+    requests: int = 0
+    """API requests that got an answer."""
+    error: ListingSourceError | None = None
+    """Set when the search stopped early on a failed request. `listings` then holds what
+    arrived before it."""
+    cancelled: bool = False
+    """True when `should_stop` ended the search early. `listings` holds what arrived."""
 
 
 def image_url(code: str, size: str = "600x450") -> str:
@@ -133,20 +140,67 @@ def listing_attributes(listing: Listing, fetch: Fetch) -> dict[str, str]:
     return attributes
 
 
-def search_listings(search: Search, fetch: Fetch) -> SearchResults:
+class _Stopped(Exception):
+    """Raised inside a search when `should_stop` says to make no further requests."""
+
+
+def search_listings(
+    search: Search,
+    fetch: Fetch,
+    on_batch: Callable[[list[Listing]], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
+) -> SearchResults:
     """All Listings for `search`, one API search per owner type, each Listing tagged
-    with the owner type it came from."""
+    with the owner type it came from.
+
+    `on_batch` gets each API page's new Listings, in request order, as the page arrives.
+    `should_stop` is asked before every request; once true, no more are made. A failed
+    request ends the search too, but is returned in `SearchResults.error` beside the
+    Listings that arrived before it, not raised.
+    """
     listings: list[Listing] = []
     totals: dict[OwnerType, int] = {}
-    for owner_type in search.owner_types:
-        found, totals[owner_type] = _search_owner_type(search, owner_type, fetch)
-        listings.extend(found)
-    return SearchResults(listings, totals)
+    requests = 0
+    error: ListingSourceError | None = None
+    cancelled = False
+
+    def counted_fetch(url: str) -> str:
+        nonlocal requests
+        if should_stop is not None and should_stop():
+            raise _Stopped
+        text = fetch(url)
+        requests += 1
+        return text
+
+    def emit(batch: list[Listing]) -> None:
+        if batch:
+            listings.extend(batch)
+            if on_batch is not None:
+                on_batch(list(batch))
+
+    try:
+        for owner_type in search.owner_types:
+            _search_owner_type(search, owner_type, counted_fetch, totals, emit)
+    except _Stopped:
+        cancelled = True
+        logger.info("{}: cancelled after {} requests with {} Listings", API_NAME, requests, len(listings))
+    except ListingSourceError as failure:
+        error = failure
+        logger.warning("{}: failed after {} requests with {} Listings: {}", API_NAME, requests, len(listings), failure)
+    return SearchResults(listings, totals, requests, error, cancelled)
 
 
-def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> tuple[list[Listing], int]:
+def _search_owner_type(
+    search: Search,
+    owner_type: OwnerType,
+    fetch: Fetch,
+    totals: dict[OwnerType, int],
+    emit: Callable[[list[Listing]], None],
+) -> None:
     page = parse_full(fetch(full_url(search, owner_type)), owner_type)
+    totals[owner_type] = page.reported_total
     results = {listing.post_id: listing for listing in page.listings}
+    emit(list(results.values()))
     results_seen = page.result_count
     """How far into the results paging got, counting results skipped while parsing."""
 
@@ -159,8 +213,12 @@ def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> t
             offset = batch_number * BATCH_PAGE_SIZE
             batch = parse_batch(fetch(batch_url(offset, cache_id, max_posted_ts, page.cache_ts)), owner_type)
             # Batches restart from the first result, so they repeat the `full` page.
+            new: list[Listing] = []
             for listing in batch.listings:
-                results.setdefault(listing.post_id, _with_details(listing, details))
+                if listing.post_id not in results:
+                    results[listing.post_id] = _with_details(listing, details)
+                    new.append(results[listing.post_id])
+            emit(new)
             results_seen = max(results_seen, offset + batch.result_count)
             if batch.result_count < BATCH_PAGE_SIZE:
                 break
@@ -174,7 +232,6 @@ def _search_owner_type(search: Search, owner_type: OwnerType, fetch: Fetch) -> t
         # Normal for dealer searches: the total leaves out results syndicated from other areas.
         logger.debug("{} {}: got {} results, API reported {}", API_NAME, owner_type, results_seen, page.reported_total)
     logger.info("{} {}: {} Listings", API_NAME, owner_type, len(results))
-    return list(results.values()), page.reported_total
 
 
 # URLs

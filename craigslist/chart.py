@@ -44,6 +44,8 @@ def chart_options(search: Search, result: SearchResult) -> dict[str, Any]:
 def empty_message(search: Search, result: SearchResult) -> str | None:
     """What to show in place of the chart when there is nothing to plot, else None."""
     car = f"{search.make} {search.model}"
+    if not result.listings and (result.error or result.cancelled):
+        return "No listings arrived before the Search stopped."
     if not result.listings:
         return f"No {car} listings in {search.city}."
     if all(listing.mileage is None for listing in result.listings):
@@ -56,7 +58,24 @@ def status_text(search: Search, result: SearchResult) -> str:
         f"{sum(listing.owner_type == owner_type for listing in result.listings)} {owner_type}"
         for owner_type in search.owner_types
     )
-    return f"{len(result.listings)} listings: {counts}"
+    text = f"{len(result.listings)} listings: {counts}"
+    return f"Cancelled. {text}" if result.cancelled else text
+
+
+def progress_text(count: int) -> str:
+    """The running count while a Search is still fetching."""
+    return f"{count} listings so far"
+
+
+def failure_banner(result: SearchResult) -> str | None:
+    """The banner for a Search Craigslist failed partway through, else None."""
+    if result.error is None:
+        return None
+    requests = "1 request" if result.requests == 1 else f"{result.requests} requests"
+    return (
+        f"Craigslist stopped answering after {requests}. "
+        f"Showing {len(result.listings)} listings; there may be more."
+    )
 
 
 def _points(owner_type: OwnerType, result: SearchResult) -> dict[str, Any]:
