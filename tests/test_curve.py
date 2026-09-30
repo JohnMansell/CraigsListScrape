@@ -75,3 +75,23 @@ def test_returns_not_enough_data_when_the_fit_fails(monkeypatch):
     result = fit_price_curve([(0, 20_000), (50_000, 12_000), (100_000, 8_000)])
 
     assert isinstance(result, NotEnoughData)
+
+
+def test_reports_the_range_of_the_points_it_kept_not_the_outliers():
+    points = [
+        (0, known_curve(0)),
+        (20_000, known_curve(20_000)),
+        (40_000, known_curve(40_000)),
+        (60_000, known_curve(60_000)),
+        (80_000, known_curve(80_000)),
+        (100_000, known_curve(100_000)),
+        (120_000, known_curve(120_000)),
+        (300_000, 1_000_000),
+    ]
+
+    result = fit_price_curve(points)
+
+    assert not isinstance(result, NotEnoughData)
+    assert (result.min_miles, result.max_miles) == (0, 120_000)
+    assert result.min_price == pytest.approx(known_curve(120_000))
+    assert result.max_price == pytest.approx(known_curve(0))

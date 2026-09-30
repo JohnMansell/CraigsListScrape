@@ -2,6 +2,8 @@ from craigslist.chart import (
     DEALER_COLOR,
     OWNER_COLOR,
     chart_options,
+    curve_notes,
+    default_range,
     empty_message,
     failure_banner,
     progress_text,
@@ -17,7 +19,11 @@ def listing(post_id: int, owner_type: OwnerType, mileage: int | None, price: int
 
 
 def curve(*points: tuple[float, float]) -> PriceCurve:
-    return PriceCurve(tuple(CurvePoint(miles, price) for miles, price in points), 1.0, 1.0, 1.0)
+    miles = [point[0] for point in points]
+    prices = [point[1] for point in points]
+    return PriceCurve(
+        tuple(CurvePoint(m, p) for m, p in points), 1.0, 1.0, 1.0, min(miles), max(miles), min(prices), max(prices)
+    )
 
 
 SEARCH = Search("CA", "Orange County", "Honda", "Civic")
@@ -122,3 +128,78 @@ def test_a_stopped_search_with_no_listings_is_not_reported_as_empty():
     search = Search("CA", "Orange County", "honda", "civic")
 
     assert empty_message(search, SearchResult([], {}, {}, cancelled=True)) == "No listings arrived before the Search stopped."
+
+
+OWNER_ONLY = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,))
+
+
+def test_default_range_comes_from_the_kept_points_with_padding():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 50_000, 12_000), listing(2, OwnerType.OWNER, 60_000, 95_000)],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    view = default_range(OWNER_ONLY, result)
+
+    assert view is not None
+    assert (view.min_miles, view.max_miles) == (5_000, 115_000)
+    assert (view.min_price, view.max_price) == (7_400, 20_600)
+
+
+def test_default_range_uses_every_point_of_an_owner_type_without_a_curve():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 0, 1_000), listing(2, OwnerType.OWNER, 100, 2_000)],
+        {OwnerType.OWNER: NotEnoughData("too few")},
+        {},
+    )
+
+    view = default_range(OWNER_ONLY, result)
+
+    assert view is not None
+    assert view.max_price > 2_000 and view.min_price < 1_000
+
+
+def test_default_range_is_absent_with_nothing_to_plot():
+    assert default_range(OWNER_ONLY, SearchResult([listing(1, OwnerType.OWNER, None)], {}, {})) is None
+
+
+def test_outliers_are_drawn_as_arrows_at_the_chart_edge_and_keep_their_real_values():
+    result = SearchResult(
+        [
+            listing(1, OwnerType.OWNER, 50_000, 12_000),
+            listing(2, OwnerType.OWNER, 60_000, 95_000),
+            listing(3, OwnerType.OWNER, 60_000, 100),
+            listing(4, OwnerType.OWNER, 500_000, 12_000),
+        ],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    options = chart_options(OWNER_ONLY, result)
+
+    assert options["yAxis"]["max"] == 20_600 and options["yAxis"]["min"] == 7_400
+    assert options["xAxis"]["max"] == 115_000
+    data = series_named(options, "Owner")["data"]
+    assert data[0] == [50_000, 12_000]
+    assert data[1]["value"] == [60_000, 20_600] and data[1]["actual"] == [60_000, 95_000]
+    assert data[1]["symbol"] == "arrow" and data[1]["symbolRotate"] == 0
+    assert data[2]["value"] == [60_000, 7_400] and data[2]["symbolRotate"] == 180
+    assert data[3]["value"] == [115_000, 12_000] and data[3]["symbolRotate"] == -90
+
+
+def test_axes_are_left_to_the_chart_when_there_is_nothing_to_fit():
+    options = chart_options(OWNER_ONLY, SearchResult([], {}, {}))
+
+    assert "min" not in options["xAxis"] and "max" not in options["yAxis"]
+
+
+def test_too_few_points_for_a_curve_gets_a_note_per_owner_type():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 1_000)],
+        {OwnerType.OWNER: NotEnoughData("too few"), OwnerType.DEALER: curve((0, 1), (1, 1))},
+        {},
+    )
+
+    assert curve_notes(SEARCH, result) == ["Too few owner listings for a curve"]
+    assert curve_notes(SEARCH, SearchResult([], {}, {})) == []
