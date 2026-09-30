@@ -1,3 +1,5 @@
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -99,6 +101,8 @@ def test_parses_a_full_response_into_listings():
         url="https://www.craigslist.org/view/d/laguna-niguel-2015-mercedes-benz-c300/rbFpehbubddhXXYr61UQG5",
         image_codes=page.listings[0].image_codes,
         owner_type=OwnerType.OWNER,
+        posted=datetime(2026, 9, 18, 19, 2, 16, tzinfo=UTC),
+        location="Laguna Niguel",
     )
     assert image_url(page.listings[0].image_codes[0]) == (
         "https://images.craigslist.org/00h0h_4R4y4ghJzOC_0CI0t2_600x450.jpg"
@@ -386,3 +390,63 @@ def test_http_fetcher_waits_between_requests():
     fetch("https://sapi.craigslist.org/2")
 
     assert sleeps == [pytest.approx(0.3)]
+
+
+# Posted time and location
+
+
+def test_full_result_has_posted_time_and_location():
+    listings_by_id = by_post_id(parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings)
+
+    first = listings_by_id[7968808449]
+    assert first.posted == datetime.fromtimestamp(1789407924 + 350212, UTC)
+    assert first.posted.tzinfo is not None
+    assert first.location == "Laguna Niguel"
+    assert all(listing.posted for listing in listings_by_id.values())
+    assert listings_by_id[7968734514].location is None  # geo index 0 has no description
+
+
+def test_batch_result_has_no_posted_time_or_location():
+    page = parse_batch(fixture("owner_batch_0.json"), OwnerType.OWNER)
+
+    assert all(listing.posted is None and listing.location is None for listing in page.listings)
+
+
+def test_full_result_without_a_geo_string_or_posted_offset_gets_none():
+    body = json.loads(fixture("owner_full.json"))
+    item = body["data"]["items"][0]
+    item[1], item[4] = None, "not a geo string"
+    body["data"]["items"][1][4] = "1:9999~1~2"  # index outside locationDescriptions
+
+    by_id = by_post_id(parse_full(json.dumps(body), OwnerType.OWNER).listings)
+
+    assert (by_id[7968808449].posted, by_id[7968808449].location) == (None, None)
+    assert by_id[7966353423 + body["data"]["items"][1][0]].location is None
+
+
+def test_full_response_without_decode_dates_or_descriptions_gives_none():
+    body = json.loads(fixture("owner_full.json"))
+    del body["data"]["decode"]["minPostedDate"]
+    del body["data"]["decode"]["locationDescriptions"]
+
+    page = parse_full(json.dumps(body), OwnerType.OWNER)
+
+    assert len(page.listings) == 20
+    assert all(listing.posted is None and listing.location is None for listing in page.listings)
+
+
+def test_paged_search_fills_batch_results_from_the_step_2_short_form(small_pages):
+    # Shift the first `full` result's id by one, so the batch copy of that post is the
+    # only one with that id and carries no posted time or location of its own.
+    body = json.loads(fixture("owner_full.json"))
+    body["data"]["items"][0][0] += 1
+    fetch = paged_owner_fetcher(owner_full=json.dumps(body))
+
+    by_id = by_post_id(search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch).listings)
+
+    filled = by_id[7968808449]
+    assert filled.posted == datetime.fromtimestamp(1787124633 + 2633503, UTC)
+    assert filled.location == "Laguna Niguel"
+    # A batch result the short form does not list stays unknown rather than failing.
+    assert by_id[7968471033].posted is None
+    assert by_id[7968471033].location is None
