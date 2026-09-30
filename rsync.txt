@@ -1,7 +1,0 @@
-__init__.py
-backend.py
-layout_objects.py
-/assets/background/
-/assets/custom.css
-/resources
-
