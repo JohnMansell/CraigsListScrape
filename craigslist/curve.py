@@ -31,6 +31,12 @@ class PriceCurve:
     """``b`` in ``price = a * exp(-b * miles) + c``."""
     floor: float
     """``c`` in ``price = a * exp(-b * miles) + c``."""
+    min_miles: float
+    """Lowest mileage among the points the fit kept."""
+    max_miles: float
+    min_price: float
+    """Lowest price among the points the fit kept. Dropped price outliers are excluded."""
+    max_price: float
 
 
 @dataclass(frozen=True)
@@ -92,6 +98,10 @@ def fit_price_curve(points: Iterable[MileagePrice]) -> PriceCurve | NotEnoughDat
         amplitude,
         rate / MILE_SCALE,
         floor,
+        float(miles.min()),
+        float(miles.max()),
+        float(prices.min()),
+        float(prices.max()),
     )
 
 

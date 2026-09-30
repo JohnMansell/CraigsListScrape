@@ -6,8 +6,8 @@ import pytest
 
 from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist import listings
-from craigslist.listings import OwnerType
-from craigslist.search import Search, SearchError, run_search
+from craigslist.listings import Listing, ListingSourceError, OwnerType
+from craigslist.search import Search, SearchError, run_live_search, run_search
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -62,45 +62,79 @@ def test_run_search_rejects_unknown_lookup_values(search, message):
         run_search(search, lambda url: pytest.fail("lookup validation should run before fetching"))
 
 
-def test_run_search_reports_progress_once_per_api_request():
-    progress: list[None] = []
+def paged_fetch(responses: dict[str, str]):
+    def fetch(url: str) -> str:
+        query = {key: values[0] for key, values in parse_qs(urlsplit(url).query).items()}
+        step = query["batch"].split("-")
+        if urlsplit(url).path.endswith("/batch"):
+            return responses[f"batch_{step[1]}"]
+        return responses["owner_full" if step[1] == "0" else "owner_cache"]
 
-    result = run_search(
-        Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.OWNER,)),
-        lambda url: fixture("owner_full.json"),
-        progress=lambda: progress.append(None),
-    )
-
-    assert len(result.listings) == 20
-    assert progress == [None]
+    return fetch
 
 
-def test_run_search_reports_every_paged_api_request(monkeypatch):
+@pytest.fixture
+def paged_responses(monkeypatch) -> dict[str, str]:
     monkeypatch.setattr(listings, "FULL_PAGE_SIZE", 20)
     monkeypatch.setattr(listings, "BATCH_PAGE_SIZE", 20)
-    responses = {
+    return {
         "owner_full": fixture("owner_full.json"),
         "owner_cache": fixture("owner_cache.json"),
         "batch_0": fixture("owner_batch_0.json"),
         "batch_20": fixture("owner_batch_20.json"),
     }
-    progress: list[None] = []
 
-    def fetch(url: str) -> str:
-        query = {key: values[0] for key, values in parse_qs(urlsplit(url).query).items()}
-        step = query["batch"].split("-")
-        if urlsplit(url).path.endswith("/batch"):
-            response = f"batch_{step[1]}"
-        elif step[1] == "0":
-            response = "owner_full"
-        else:
-            response = "owner_cache"
-        return responses[response]
 
-    run_search(
-        Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.OWNER,)),
-        fetch,
-        progress=lambda: progress.append(None),
-    )
+OWNER_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.OWNER,))
 
-    assert progress == [None, None, None, None]
+
+def test_run_search_reports_each_batch_and_they_add_up_to_the_listings(paged_responses):
+    batches: list[list[Listing]] = []
+
+    result = run_search(OWNER_SEARCH, paged_fetch(paged_responses), on_batch=batches.append)
+
+    assert len(batches) == 3
+    assert [listing for batch in batches for listing in batch] == result.listings
+    assert result.requests == 4
+
+
+def test_run_search_keeps_the_listings_that_arrived_before_a_failure(paged_responses):
+    calls = 0
+    fetch = paged_fetch(paged_responses)
+
+    def failing(url: str) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise ListingSourceError("HTTP 500")
+        return fetch(url)
+
+    result = run_search(OWNER_SEARCH, failing)
+
+    assert result.error is not None
+    assert result.requests == 2
+    assert len(result.listings) == 20
+    assert isinstance(result.curves[OwnerType.OWNER], PriceCurve)
+
+
+def test_run_search_stops_when_asked(paged_responses):
+    urls: list[str] = []
+    fetch = paged_fetch(paged_responses)
+
+    def counting(url: str) -> str:
+        urls.append(url)
+        return fetch(url)
+
+    result = run_search(OWNER_SEARCH, counting, should_stop=lambda: len(urls) >= 1)
+
+    assert len(urls) == 1
+    assert result.cancelled
+    assert len(result.listings) == 20
+
+
+def test_run_live_search_uses_the_given_fetcher():
+    dealer_full = fixture("dealer_full.json")
+
+    result = run_live_search(Search("CA", "Orange County", "honda", "civic", (OwnerType.DEALER,)), lambda url: dealer_full)
+
+    assert {listing.owner_type for listing in result.listings} == {OwnerType.DEALER}

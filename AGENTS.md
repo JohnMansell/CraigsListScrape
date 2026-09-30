@@ -1,0 +1,66 @@
+# AGENTS.md
+
+## What this is
+
+A NiceGUI web app that searches Craigslist car listings and plots price vs. mileage in ECharts, with an exponential-decay Price curve per owner type (owner filled, dealer hollow). Hovering a point shows the listing in the Preview panel; clicking pins it. Stack: NiceGUI + ECharts, httpx + selectolax, scipy, loguru. The code is the `craigslist/` package.
+
+## Commands
+
+uv-managed, Python 3.14 (`.python-version`). Not an installable package: there is no build system. The app runs as `python -m craigslist` from the repo root.
+
+```
+uv sync                                  # create .venv from uv.lock
+uv run python -m craigslist              # Search page, http://127.0.0.1:8080
+uv run python -m craigslist --log DEBUG
+uv run python -m craigslist listings --make honda --model civic   # live Search, prints Listings
+uv run python tests/fixtures/refresh.py  # re-fetch the saved API responses (hits Craigslist)
+uv run pytest                            # all tests
+uv run pytest tests/test_log.py          # one test file
+uv run --with mypy mypy craigslist tests
+uv add <pkg>                             # add a dependency (updates pyproject.toml and uv.lock)
+```
+
+- Run from the repo root.
+- No test may touch the network (`tests/conftest.py` makes connecting fail). The Listing source tests use saved API responses in `tests/fixtures/`, trimmed to 20 results; the tests shrink the page sizes to 20 so those fixtures page like a large search. There is no lint config, and mypy is not a dependency.
+- New code must not use star imports or do work at import time. Tests check for star imports, and that importing every module with stray command-line flags succeeds and creates no files or directories.
+
+## Architecture
+
+- `__main__.py`: entry point. Parses `--log`, calls `configure_logging`, and runs the `listings` command, or with no command serves the Search page.
+- `page.py`: the NiceGUI Search page. `SearchForm` holds the toolbar values and the Search-enabled rules; `SearchForm.from_query`/`to_query` map the URL to the controls. `search_page` builds one page per browser tab and runs `search.run_live_search` in `run.io_bound`, polling a queue every 0.25 s to draw each batch. All Search state lives inside `search_page`: the page serves several people from one process, so nothing may be module-level. `serve` binds 127.0.0.1:8080, light or dark following the browser.
+- `chart.py`: ECharts option dicts from a `SearchResult`, plus the empty-chart message and status line. Default axes fit the kept points (`PriceCurve.min_miles`..`max_price`), padded 5%; outliers become edge arrows carrying `actual`. Drag-zoom uses the ECharts toolbox `dataZoom`, armed by `dispatchAction` after each update. `curve_notes` gives the too-few-points notes. No NiceGUI import, so it tests without a browser.
+- `preview.py`: Preview panel content, built without NiceGUI, plus the no-mileage note and `load_details(listing, fetch)`. `page.py` wires chart hover, click and pin to it.
+- `search.py`: `run_search(Search, fetch, on_batch, should_stop)` validates lookup values, reports each API page's Listings as it arrives, then returns Listings and a Price curve per owner type (`curve.py`). A failed request or a stop returns the Listings that arrived, with `error` or `cancelled` set, instead of raising. `run_live_search` does the same with its own `HttpFetcher` when no fetch is given.
+- `listings.py`: Listing source. `search_listings(Search, fetch)` returns Listings (including `posted` and `location`, each `None` when unknown) from Craigslist's undocumented JSON search API (`sapi.craigslist.org`), one API search per owner type. `fetch(url) -> str` is passed in; `HttpFetcher` is the live one (User-Agent, 0.5 s pacing). Every Craigslist URL and response-layout guess lives here. Findings behind it: `docs/research/craigslist-search.md`.
+- `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
+- `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`; edit the CSVs to add a city or model. State and make lookups ignore case.
+
+## Gotchas
+
+- Search API (`listings.py`), as of 2026-09:
+  - `totalResultCount` counts local results only, so paging runs until a batch comes back short. Dealer searches return more results than the total, syndicated from other areas.
+  - `batch` pages restart from result 0, repeating the 360 `full` results; Listings are deduplicated by post id.
+  - Step 2 (`full?batch=0-<cacheTs>-0-1-0`) has no `cacheId` when there are too few results to page.
+  - A search with no results has `"decode": 0` instead of an object.
+  - Results with no price are skipped and logged. No mileage gives `None`; no photos gives no image codes.
+- Remembered Searches use `app.storage.user`, keyed by browser cookie. The signing secret is generated into the gitignored `.nicegui/storage_secret`. A URL naming any part of a Search wins over the browser's memory, and a complete link auto-runs; a plain reload restores the controls without searching.
+- `logs/craigslist.log` is created only when the entry point configures logging.
+
+## GitHub identity
+
+- Account: personal (`JohnMansell`).
+- Git remote: `github-personal`.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `JohnMansell/CraigsListScrape`, via `gh-personal`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `CONTEXT.md` plus `docs/adr/`, created on demand. See `docs/agents/domain.md`.
