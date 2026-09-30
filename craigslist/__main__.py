@@ -1,7 +1,9 @@
 import argparse
+import sys
 
 from loguru import logger
 
+from craigslist.chart import failure_banner
 from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist.listings import Fetch, OwnerType
 from craigslist.log import LOG_LEVELS, configure_logging
@@ -48,6 +50,8 @@ def print_listings(search: Search, fetch: Fetch | None) -> None:
     for owner_type, total in results.reported_totals.items():
         count = sum(listing.owner_type == owner_type for listing in results.listings)
         print(_summary(owner_type, count, total, results))
+    if banner := failure_banner(results):
+        print(banner, file=sys.stderr)
 
 
 def _summary(owner_type: OwnerType, count: int, total: int, results: SearchResult) -> str:

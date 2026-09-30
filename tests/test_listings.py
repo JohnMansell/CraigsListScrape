@@ -351,6 +351,94 @@ def test_paging_stops_at_the_batch_request_limit(small_pages, monkeypatch, log_m
     assert any("stopped after 1 batch requests" in message for message in log_messages)
 
 
+# Streaming, failure and cancelling
+
+
+class FailsAfter:
+    """Wraps a fetch and raises ListingSourceError from request number `n` + 1."""
+
+    def __init__(self, fetch: FakeFetcher, n: int) -> None:
+        self.fetch, self.n, self.calls = fetch, n, 0
+
+    def __call__(self, url: str) -> str:
+        self.calls += 1
+        if self.calls > self.n:
+            raise ListingSourceError("HTTP 429")
+        return self.fetch(url)
+
+
+def test_batches_are_reported_in_request_order_and_add_up_to_the_listings(small_pages):
+    batches: list[list[Listing]] = []
+
+    results = search_listings(
+        Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), paged_owner_fetcher(), on_batch=batches.append
+    )
+
+    assert len(batches) == 3  # the full page, then batches at offsets 0 and 20
+    assert [listing for batch in batches for listing in batch] == results.listings
+    assert batches[0] == parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings
+    assert not {listing.post_id for listing in batches[1]} & {listing.post_id for listing in batches[0]}
+    assert results.error is None and not results.cancelled and results.requests == 4
+
+
+def test_a_failure_after_some_pages_returns_their_listings_and_the_error(small_pages):
+    batches: list[list[Listing]] = []
+    fetch = FailsAfter(paged_owner_fetcher(), 3)  # full, cache, batch 0 answer; batch 20 fails
+
+    results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch, on_batch=batches.append)
+
+    assert isinstance(results.error, ListingSourceError)
+    assert results.requests == 3
+    assert not results.cancelled
+    assert results.listings == [listing for batch in batches for listing in batch]
+    assert len(results.listings) > FIXTURE_PAGE_SIZE - 1
+
+
+def test_a_failure_on_the_first_request_returns_no_listings_and_the_error():
+    results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), FailsAfter(FakeFetcher(), 0))
+
+    assert results.listings == []
+    assert results.requests == 0
+    assert results.error is not None
+
+
+def test_a_failure_in_the_first_owner_type_keeps_it_and_skips_the_second():
+    fetch = FailsAfter(FakeFetcher(owner_full=fixture("owner_full.json")), 1)
+    search = Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER, OwnerType.DEALER))
+
+    results = search_listings(search, fetch)
+
+    assert len(results.listings) == 20
+    assert fetch.calls == 2
+    assert results.error is not None
+
+
+def test_cancelling_makes_no_further_requests(small_pages):
+    fetch = paged_owner_fetcher()
+    batches: list[list[Listing]] = []
+
+    results = search_listings(
+        Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)),
+        fetch,
+        on_batch=batches.append,
+        should_stop=lambda: len(fetch.urls) >= 2,  # stop once the full and cache requests are made
+    )
+
+    assert len(fetch.urls) == 2
+    assert results.cancelled
+    assert results.error is None
+    assert results.listings == batches[0]
+
+
+def test_cancelling_before_the_first_request_makes_none():
+    fetch = FakeFetcher()
+
+    results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch, should_stop=lambda: True)
+
+    assert fetch.urls == []
+    assert results.cancelled and results.listings == []
+
+
 # Fetching
 
 

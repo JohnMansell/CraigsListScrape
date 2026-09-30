@@ -1,6 +1,14 @@
-from craigslist.chart import DEALER_COLOR, OWNER_COLOR, chart_options, empty_message, status_text
+from craigslist.chart import (
+    DEALER_COLOR,
+    OWNER_COLOR,
+    chart_options,
+    empty_message,
+    failure_banner,
+    progress_text,
+    status_text,
+)
 from craigslist.curve import CurvePoint, NotEnoughData, PriceCurve
-from craigslist.listings import Listing, OwnerType
+from craigslist.listings import Listing, ListingSourceError, OwnerType
 from craigslist.search import Search, SearchResult
 
 
@@ -88,3 +96,29 @@ def test_status_counts_listings_per_owner_type():
     )
 
     assert status_text(SEARCH, result) == "3 listings: 1 owner, 2 dealer"
+
+
+def test_failure_banner_names_the_requests_and_listings():
+    result = SearchResult([listing(1, OwnerType.OWNER, 1_000)] * 3, {}, {}, requests=4, error=ListingSourceError("HTTP 429"))
+
+    assert failure_banner(result) == (
+        "Craigslist stopped answering after 4 requests. Showing 3 listings; there may be more."
+    )
+
+
+def test_failure_banner_is_absent_without_an_error():
+    assert failure_banner(SearchResult([], {}, {}, requests=2)) is None
+
+
+def test_cancelled_search_says_so_in_the_status_line():
+    search = Search("CA", "Orange County", "honda", "civic", (OwnerType.OWNER,))
+    result = SearchResult([listing(1, OwnerType.OWNER, 1_000)], {}, {}, cancelled=True)
+
+    assert status_text(search, result) == "Cancelled. 1 listings: 1 owner"
+    assert progress_text(142) == "142 listings so far"
+
+
+def test_a_stopped_search_with_no_listings_is_not_reported_as_empty():
+    search = Search("CA", "Orange County", "honda", "civic")
+
+    assert empty_message(search, SearchResult([], {}, {}, cancelled=True)) == "No listings arrived before the Search stopped."

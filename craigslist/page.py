@@ -3,19 +3,23 @@
 The page may serve several people from one process, so every piece of Search state
 lives inside `search_page`, one copy per browser tab. Nothing here is module-level state.
 """
+import queue
+import threading
 from dataclasses import dataclass
 
 from loguru import logger
 from nicegui import run, ui
 
 from craigslist import lookup
-from craigslist.chart import chart_options, empty_message, status_text
-from craigslist.listings import ListingSourceError, OwnerType
+from craigslist.chart import chart_options, empty_message, failure_banner, progress_text, status_text
+from craigslist.listings import Listing, OwnerType
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 
 HOST = "127.0.0.1"
 """Local only until the Linode ticket adds a --host flag."""
 PORT = 8080
+POLL_SECONDS = 0.25
+"""How often the page draws the Listings that arrived since the last draw."""
 TITLE = "Craigslist car prices"
 
 
@@ -66,10 +70,22 @@ def search_page() -> None:
     """Build one Search page for one browser tab."""
     form = SearchForm()
     running = False
+    cancelling = False
+    stop = threading.Event()
+    arrived: queue.Queue[list[Listing]] = queue.Queue()
+    """Batches the worker thread hands to the page. Only the timer touches the UI."""
+    live: list[Listing] = []
+    live_search: Search | None = None
 
     def refresh_search_button() -> None:
         problem = form.problem()
-        search_button.set_enabled(problem is None and not running)
+        if running:
+            search_button.set_text("Cancelling..." if cancelling else "Cancel")
+            search_button.set_enabled(not cancelling)
+            hint.set_text("")
+            return
+        search_button.set_text("Search")
+        search_button.set_enabled(problem is None)
         hint.set_text(problem or "")
 
     def state_changed(state: str | None) -> None:
@@ -98,38 +114,68 @@ def search_page() -> None:
         form.dealer = checked
         refresh_search_button()
 
+    def draw_arrivals() -> None:
+        """Add the batches that arrived since the last draw, and the running count."""
+        if not running:
+            return
+        new = False
+        while True:
+            try:
+                live.extend(arrived.get_nowait())
+            except queue.Empty:
+                break
+            new = True
+        if new and live_search is not None:
+            show(live_search, SearchResult(list(live), {}, {}), final=False)
+
     async def search_clicked() -> None:
-        nonlocal running
+        nonlocal running, cancelling, stop, live_search
+        if running:
+            cancelling = True
+            stop.set()
+            refresh_search_button()
+            return
         search = form.search()
-        running = True
+        stop = threading.Event()
+        live.clear()
+        live_search = search
+        while not arrived.empty():
+            arrived.get_nowait()
+        running, cancelling = True, False
         refresh_search_button()
+        banner.set_visibility(False)
+        chart.set_visibility(False)
+        empty_label.set_visibility(False)
         status.set_text(f"Searching Craigslist for {search.make} {search.model} in {search.city}...")
+        timer.activate()
         try:
-            result = await run.io_bound(run_live_search, search)
-        except (SearchError, ListingSourceError) as error:
+            result = await run.io_bound(run_live_search, search, None, arrived.put, stop.is_set)
+        except SearchError as error:
             logger.warning("Search {} failed: {}", search, error)
-            chart.set_visibility(False)
-            empty_label.set_visibility(False)
             status.set_text(f"Search failed: {error}")
             return
         finally:
-            running = False
+            timer.deactivate()
+            running = cancelling = False
             refresh_search_button()
-        if result is None:  # cancelled, or the app is shutting down
+        if result is None:  # the app is shutting down
             return
-        show(search, result)
+        show(search, result, final=True)
 
-    def show(search: Search, result: SearchResult) -> None:
-        message = empty_message(search, result)
-        chart.set_visibility(message is None)
+    def show(search: Search, result: SearchResult, final: bool) -> None:
+        message = empty_message(search, result) if final else None
+        chart.set_visibility(message is None and bool(result.listings))
         empty_label.set_visibility(message is not None)
-        if message is None:
+        if message is not None:
+            empty_label.set_text(message)
+        elif result.listings:
             chart.options.clear()
             chart.options.update(chart_options(search, result))
             chart.update()
-        else:
-            empty_label.set_text(message)
-        status.set_text(status_text(search, result))
+        text = failure_banner(result)
+        banner.set_visibility(text is not None)
+        banner.set_text(text or "")
+        status.set_text(status_text(search, result) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
@@ -142,6 +188,8 @@ def search_page() -> None:
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
+        banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
+        banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):
             with ui.column().classes("grow h-full items-center justify-center"):
                 chart = ui.echart({}).classes("w-full h-full")
@@ -150,6 +198,7 @@ def search_page() -> None:
                 empty_label.set_visibility(False)
             ui.column().classes("w-80 h-full border rounded")  # Preview panel, a later ticket
         status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
+    timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
     refresh_search_button()
 
 

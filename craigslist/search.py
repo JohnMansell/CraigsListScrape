@@ -4,11 +4,13 @@ from dataclasses import dataclass
 
 from craigslist import lookup
 from craigslist.curve import NotEnoughData, PriceCurve, fit_price_curve
-from craigslist.listings import Fetch, HttpFetcher, Listing, OwnerType, Search as ListingSearch, search_listings
+from craigslist.listings import Fetch, HttpFetcher, Listing, ListingSourceError, OwnerType, Search as ListingSearch, search_listings
 
 
-Progress = Callable[[], None]
-"""Called once immediately before each Craigslist API request."""
+OnBatch = Callable[[list[Listing]], None]
+"""Gets each API page's new Listings as the page arrives."""
+ShouldStop = Callable[[], bool]
+"""Asked before every API request; True means make no more."""
 
 
 class SearchError(ValueError):
@@ -33,34 +35,49 @@ class SearchResult:
     listings: list[Listing]
     curves: dict[OwnerType, PriceCurve | NotEnoughData]
     reported_totals: dict[OwnerType, int]
+    requests: int = 0
+    """API requests that got an answer."""
+    error: ListingSourceError | None = None
+    """Craigslist failed mid-Search. `listings` holds what arrived before it."""
+    cancelled: bool = False
+    """The Search was stopped early. `listings` holds what arrived before that."""
 
 
-def run_search(search: Search, fetch: Fetch, progress: Progress | None = None) -> SearchResult:
-    """Validate and execute ``search``, reporting each API request through ``progress``."""
+def run_search(
+    search: Search, fetch: Fetch, on_batch: OnBatch | None = None, should_stop: ShouldStop | None = None
+) -> SearchResult:
+    """Validate and execute ``search``, reporting each API page's Listings through ``on_batch``.
+
+    A Craigslist failure or a stop leaves the Listings that arrived in the result, with
+    the failure or `cancelled` beside them. Curves are fitted to whatever arrived.
+    """
     listing_search = _listing_search(search)
-
-    def tracked_fetch(url: str) -> str:
-        if progress:
-            progress()
-        return fetch(url)
-
-    source_result = search_listings(listing_search, tracked_fetch)
+    source_result = search_listings(listing_search, fetch, on_batch, should_stop)
     curves = {
         owner_type: fit_price_curve(
             (listing.mileage, listing.price) for listing in source_result.listings if listing.owner_type == owner_type
         )
         for owner_type in search.owner_types
     }
-    return SearchResult(source_result.listings, curves, source_result.reported_totals)
+    return SearchResult(
+        source_result.listings,
+        curves,
+        source_result.reported_totals,
+        source_result.requests,
+        source_result.error,
+        source_result.cancelled,
+    )
 
 
-def run_live_search(search: Search, fetch: Fetch | None = None) -> SearchResult:
+def run_live_search(
+    search: Search, fetch: Fetch | None = None, on_batch: OnBatch | None = None, should_stop: ShouldStop | None = None
+) -> SearchResult:
     """Run `search` with `fetch`, or with a live HttpFetcher that is closed afterwards."""
     if fetch is not None:
-        return run_search(search, fetch)
+        return run_search(search, fetch, on_batch, should_stop)
     http = HttpFetcher()
     try:
-        return run_search(search, http)
+        return run_search(search, http, on_batch, should_stop)
     finally:
         http.close()
 
