@@ -103,3 +103,27 @@ def test_listings_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch,
 
     assert error.value.code == 2
     assert "unknown state 'XX'" in capsys.readouterr().err
+
+
+def test_carmax_command_prints_each_listing_and_the_total(tmp_path, monkeypatch, capsys):
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+    page = (REPO_ROOT / "tests" / "fixtures" / "carmax_last_page.json").read_text()
+
+    main(["carmax", "--state", "CA", "--city", "sf bay area", "--make", "honda", "--model", "civic"], lambda url: page)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith("dealer carmax:")
+    assert lines[-1] == "carmax: 11 Listings, API reported total 51"
+
+
+def test_carmax_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch, capsys):
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+
+    with pytest.raises(SystemExit):
+        main(["carmax", "--state", "XX", "--city", "Orange County", "--make", "honda", "--model", "civic"], lambda url: "")
+
+    assert "unknown state" in capsys.readouterr().err

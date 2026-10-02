@@ -5,6 +5,7 @@ from loguru import logger
 
 from craigslist import lookup
 from craigslist.carfax import HttpFetcher as CarfaxHttpFetcher, Search as CarfaxSearch, search_carfax
+from craigslist.carmax import HttpFetcher as CarmaxHttpFetcher, Search as CarmaxSearch, search_carmax
 from craigslist.chart import failure_banner
 from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist.listings import Fetch, OwnerType
@@ -32,6 +33,11 @@ def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
     carfax_parser.add_argument("--city", required=True)
     carfax_parser.add_argument("--make", required=True, help="for example honda")
     carfax_parser.add_argument("--model", required=True, help="for example civic")
+    carmax_parser = commands.add_parser("carmax", help="print the CarMax Listings for a live Search")
+    carmax_parser.add_argument("--state", required=True)
+    carmax_parser.add_argument("--city", required=True)
+    carmax_parser.add_argument("--make", required=True, help="for example honda")
+    carmax_parser.add_argument("--model", required=True, help="for example civic")
     args = parser.parse_args(argv)
 
     log_file = configure_logging(args.log_level)
@@ -47,6 +53,11 @@ def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
             print_carfax_listings(_carfax_search(args.state, args.city, args.make, args.model), fetch)
         except SearchError as error:
             parser.error(str(error))
+    elif args.command == "carmax":
+        try:
+            print_carmax_listings(_carmax_search(args.state, args.city, args.make, args.model), fetch)
+        except SearchError as error:
+            parser.error(str(error))
     else:
         # Imported here so the `listings` command does not load NiceGUI.
         from craigslist import page
@@ -55,6 +66,14 @@ def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
 
 
 def _carfax_search(state: str, city: str, make: str, model: str) -> CarfaxSearch:
+    return CarfaxSearch(*_validated(state, city, make, model))
+
+
+def _carmax_search(state: str, city: str, make: str, model: str) -> CarmaxSearch:
+    return CarmaxSearch(*_validated(state, city, make, model))
+
+
+def _validated(state: str, city: str, make: str, model: str) -> tuple[lookup.City, str, str]:
     if not any(known.casefold() == state.casefold() for known in lookup.states()):
         raise SearchError(f"unknown state {state!r}")
     found_city = next((c for c in lookup.cities(state) if c.name.casefold() == city.casefold()), None)
@@ -64,7 +83,7 @@ def _carfax_search(state: str, city: str, make: str, model: str) -> CarfaxSearch
         raise SearchError(f"unknown make {make!r}")
     if not any(known.casefold() == model.casefold() for known in lookup.models(make)):
         raise SearchError(f"unknown model {model!r} for make {make!r}")
-    return CarfaxSearch(found_city, make, model)
+    return found_city, make, model
 
 
 def print_carfax_listings(search: CarfaxSearch, fetch: Fetch | None) -> None:
@@ -82,6 +101,23 @@ def print_carfax_listings(search: CarfaxSearch, fetch: Fetch | None) -> None:
     print(f"carfax: {len(results.listings)} Listings, API reported total {results.reported_total}")
     if results.error is not None:
         print(f"carfax: {results.error}", file=sys.stderr)
+
+
+def print_carmax_listings(search: CarmaxSearch, fetch: Fetch | None) -> None:
+    if fetch is not None:
+        results = search_carmax(search, fetch)
+    else:
+        http = CarmaxHttpFetcher()
+        try:
+            results = search_carmax(search, http)
+        finally:
+            http.close()
+    for listing in results.listings:
+        mileage = "?" if listing.mileage is None else f"{listing.mileage:,}"
+        print(f"{listing.owner_type:<6} {listing.id} ${listing.price:>7,} {mileage:>9} mi  {listing.title}")
+    print(f"carmax: {len(results.listings)} Listings, API reported total {results.reported_total}")
+    if results.error is not None:
+        print(f"carmax: {results.error}", file=sys.stderr)
 
 
 def print_listings(search: Search, fetch: Fetch | None) -> None:

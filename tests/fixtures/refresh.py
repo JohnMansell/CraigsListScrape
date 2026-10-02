@@ -36,17 +36,13 @@ ignored slug.
 """
 import json
 import sys
-import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
-
-import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from craigslist import listings  # noqa: E402
+from craigslist import carmax, listings  # noqa: E402
 from craigslist.listings import HttpFetcher, OwnerType, Search  # noqa: E402
 from craigslist.lookup import City  # noqa: E402
 
@@ -66,20 +62,7 @@ CARFAX_LISTING_FIELDS = (
 )
 CARFAX_DEALER_FIELDS = ("name", "city", "state")
 
-CARMAX_API = "https://www.carmax.com/cars/api/search/run"
-CARMAX_PAGE = "https://www.carmax.com/cars/honda/civic"
 CARMAX_ZIP = "94103"
-CARMAX_RADIUS = 50
-CARMAX_PAUSE = 1.0
-CARMAX_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
-    "Referer": CARMAX_PAGE,
-}
 CARMAX_RESPONSE_FIELDS = ("totalCount", "take", "searchFailed", "hasSearchError")
 CARMAX_LISTING_FIELDS = (
     "stockNumber", "vin", "year", "make", "model", "trim", "body", "basePrice", "originalPrice",
@@ -214,24 +197,9 @@ def refresh_carfax(fetch: HttpFetcher) -> None:
     save("carfax_empty.json", {key: empty.get(key) for key in ("page", "pageSize", "totalPageCount")})
 
 
-class CarmaxFetcher:
-    """HTTP/2 client with browser headers, warmed up once. CarMax's Akamai 403s the first request."""
-
-    def __init__(self) -> None:
-        self.client = httpx.Client(headers=CARMAX_HEADERS, timeout=30, http2=True)
-        self.client.get(CARMAX_PAGE)
-        time.sleep(CARMAX_PAUSE)
-
-    def __call__(self, uri: str, skip: int, take: int = PAGE_SIZE) -> dict[str, Any]:
-        params = {"uri": uri, "zipCode": CARMAX_ZIP, "radius": f"radius-{CARMAX_RADIUS}",
-                  "shipping": 0, "sort": "price-asc", "skip": skip, "take": take}
-        response = self.client.get(f"{CARMAX_API}?{urlencode(params, safe='/')}")
-        response.raise_for_status()
-        time.sleep(CARMAX_PAUSE)
-        return response.json()
-
-    def close(self) -> None:
-        self.client.close()
+def carmax_page(fetch: carmax.HttpFetcher, uri: str, skip: int) -> dict[str, Any]:
+    """One CarMax search page of PAGE_SIZE items, parsed. The fetcher warms up on its first call."""
+    return json.loads(fetch(carmax.search_url(CARMAX_ZIP, uri, skip, PAGE_SIZE)))
 
 
 def trim_carmax_response(response: dict[str, Any], count: int) -> dict[str, Any]:
@@ -240,8 +208,8 @@ def trim_carmax_response(response: dict[str, Any], count: int) -> dict[str, Any]
     return {key: response[key] for key in CARMAX_RESPONSE_FIELDS} | {"selectedFacets": facets, "items": items}
 
 
-def refresh_carmax(fetch: CarmaxFetcher) -> None:
-    page_1 = fetch("/cars/honda/civic", 0)
+def refresh_carmax(fetch: carmax.HttpFetcher) -> None:
+    page_1 = carmax_page(fetch, "/cars/honda/civic", 0)
     if len(page_1["items"]) < PAGE_SIZE:
         sys.exit(f"carmax civic page 1 returned {len(page_1['items'])} results, need {PAGE_SIZE} to page")
     trimmed_1 = trim_carmax_response(page_1, PAGE_SIZE)
@@ -249,22 +217,22 @@ def refresh_carmax(fetch: CarmaxFetcher) -> None:
     trimmed_1["items"][0].pop("mileage", None)
     save("carmax_page_1.json", trimmed_1)
 
-    page_2 = fetch("/cars/honda/civic", PAGE_SIZE)
+    page_2 = carmax_page(fetch, "/cars/honda/civic", PAGE_SIZE)
     if len(page_2["items"]) < PAGE_SIZE:
         sys.exit("carmax civic page 2 is short; the later-page fixture needs a full page")
     save("carmax_page_2.json", trim_carmax_response(page_2, PAGE_SIZE))
 
-    last_page = fetch("/cars/honda/civic", 2 * PAGE_SIZE)
+    last_page = carmax_page(fetch, "/cars/honda/civic", 2 * PAGE_SIZE)
     if not 0 < len(last_page["items"]) < PAGE_SIZE:
         sys.exit("carmax civic page 3 is no longer short and non-empty; pick another model for the last-page fixture")
     save("carmax_last_page.json", trim_carmax_response(last_page, len(last_page["items"])))
 
-    empty = fetch("/cars/honda/prelude", 0)
+    empty = carmax_page(fetch, "/cars/honda/prelude", 0)
     if empty["items"] or empty["totalCount"]:
         sys.exit("carmax prelude search now has results; pick another model with no stock near the zip")
     save("carmax_empty.json", trim_carmax_response(empty, 0))
 
-    unknown = fetch("/cars/honda/zzznotreal", 0)
+    unknown = carmax_page(fetch, "/cars/honda/zzznotreal", 0)
     if any(facet["category"] in ("model", "series") for facet in unknown["selectedFacets"]):
         sys.exit("carmax now recognises the nonsense model; pick another")
     save("carmax_unknown_model.json", trim_carmax_response(unknown, PAGE_SIZE))
@@ -278,11 +246,11 @@ def main() -> None:
         refresh_carfax(fetch)
     finally:
         fetch.close()
-    carmax = CarmaxFetcher()
+    carmax_fetch = carmax.HttpFetcher()
     try:
-        refresh_carmax(carmax)
+        refresh_carmax(carmax_fetch)
     finally:
-        carmax.close()
+        carmax_fetch.close()
 
 
 if __name__ == "__main__":
