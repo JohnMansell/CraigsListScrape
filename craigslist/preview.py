@@ -84,7 +84,7 @@ def no_mileage_listings(shown: Search, result: SearchResult) -> list[Listing]:
         for listing in result.listings
         if listing.mileage is None and (
             (listing.source == Source.CRAIGSLIST and listing.owner_type in shown.owner_types)
-            or (listing.source == Source.CARFAX and shown.carfax)
+            or (listing.source != Source.CRAIGSLIST and listing.source in shown.sources)
         )
     ]
 
@@ -108,11 +108,12 @@ def detail_lines(details: dict[str, str] | None) -> list[str] | str:
 def load_details(listing: Listing, fetch: Fetch | None = None) -> dict[str, str]:
     """Fetch `listing`'s detail page attributes. Blocking, so run it off the UI thread.
 
-    With no `fetch`, uses a live HttpFetcher that is closed afterwards. A Carfax Listing
-    already carries every detail Preview shows; `www.carfax.com` is DataDome-blocked
-    anyway, so this never requests it.
+    With no `fetch`, uses a live HttpFetcher that is closed afterwards. Only Craigslist
+    Listings have a detail page to fetch: another source's Listing already carries every
+    detail Preview shows (and `www.carfax.com` is DataDome-blocked anyway), so this never
+    requests it.
     """
-    if listing.source == Source.CARFAX:
+    if listing.source != Source.CRAIGSLIST:
         return {}
     if fetch is not None:
         return listing_attributes(listing, fetch)

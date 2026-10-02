@@ -1,56 +1,54 @@
 """Run a validated car search from lookup values through fitted price curves."""
-from collections.abc import Callable
-from dataclasses import dataclass
+from contextlib import ExitStack
+from dataclasses import dataclass, field
 
 from craigslist import lookup
-from craigslist.carfax import HttpFetcher as CarfaxHttpFetcher, Search as CarfaxSearch, search_carfax
 from craigslist.curve import NotEnoughData, PriceCurve, fit_price_curve
-from craigslist.listings import Fetch, HttpFetcher, Listing, ListingSourceError, OwnerType, Search as ListingSearch, search_listings
+from craigslist.listings import Fetch, HttpFetcher, Listing, ListingSourceError, OwnerType, Search as ListingSearch, Source, search_listings
+from craigslist.sources import SOURCES, OnBatch, ShouldStop, choices_text
 
 
-OnBatch = Callable[[list[Listing]], None]
-"""Gets each API page's new Listings as the page arrives."""
-ShouldStop = Callable[[], bool]
-"""Asked before every API request; True means make no more."""
+def _choices() -> str:
+    return choices_text(["Owner", "Dealer", *(info.name for info in SOURCES.values())])
 
 
 class SearchError(ValueError):
     """The caller supplied a state, city, make, or model outside the lookup tables, or a
-    Search with none of Owner, Dealer, or Carfax chosen."""
+    Search with none of Owner, Dealer, or another source chosen."""
 
 
 @dataclass(frozen=True)
 class Search:
     """The lookup values and Sources for one whole car search. `owner_types` chooses
-    Craigslist Owner and/or Dealer listings; `carfax` independently chooses Carfax's
-    (dealer-only) listings. At least one of the three must be chosen."""
+    Craigslist Owner and/or Dealer listings; `sources` independently chooses the other
+    sources (see `craigslist.sources`). At least one of them must be chosen."""
 
     state: str
     city: str
     make: str
     model: str
     owner_types: tuple[OwnerType, ...] = (OwnerType.OWNER, OwnerType.DEALER)
-    carfax: bool = True
+    sources: tuple[Source, ...] = tuple(SOURCES)
 
 
 @dataclass(frozen=True)
 class SearchResult:
     """Listings from every chosen Source, and one independently fitted Price curve per
-    Craigslist owner type plus one for Carfax."""
+    Craigslist owner type plus one per other source."""
 
     listings: list[Listing]
     curves: dict[OwnerType, PriceCurve | NotEnoughData]
     reported_totals: dict[OwnerType, int]
-    carfax_curve: PriceCurve | NotEnoughData | None = None
-    """None when the Search did not include Carfax."""
-    carfax_reported_total: int = 0
+    source_curves: dict[Source, PriceCurve | NotEnoughData] = field(default_factory=dict)
+    """One per other source the Search chose."""
+    source_reported_totals: dict[Source, int] = field(default_factory=dict)
     requests: int = 0
     """API requests that got an answer, from every Source."""
     error: ListingSourceError | None = None
     """Craigslist failed mid-Search. `listings` holds what arrived from it before that."""
-    carfax_error: ListingSourceError | None = None
-    """Carfax failed mid-Search. A Craigslist failure does not cause this, and the other
-    way around: one Source failing keeps the other's Listings."""
+    source_errors: dict[Source, ListingSourceError] = field(default_factory=dict)
+    """Other sources that failed mid-Search. A Craigslist failure does not cause these, and
+    the other way around: one Source failing keeps the others' Listings."""
     cancelled: bool = False
     """The Search was stopped early. `listings` holds what arrived before that."""
 
@@ -59,16 +57,48 @@ def run_search(
     search: Search, fetch: Fetch, on_batch: OnBatch | None = None, should_stop: ShouldStop | None = None
 ) -> SearchResult:
     """Validate and execute ``search`` against every Source it chooses, reporting each
-    API page's Listings through ``on_batch`` as it arrives, from either Source.
+    API page's Listings through ``on_batch`` as it arrives, from any Source. ``fetch``
+    serves every Source.
 
     A Source failing or a stop leaves the Listings that arrived from it in the result;
-    the other Source is unaffected. Curves are fitted to whatever arrived. The same cars
-    can appear from both Sources: they are not matched or deduplicated against each other.
+    the other Sources are unaffected. Curves are fitted to whatever arrived. The same cars
+    can appear from several Sources: they are not matched or deduplicated against each other.
     """
-    if not search.owner_types and not search.carfax:
-        raise SearchError("choose at least one of Owner, Dealer, or Carfax")
+    return _run(search, {}, fetch, on_batch, should_stop)
+
+
+def run_live_search(
+    search: Search, fetch: Fetch | None = None, on_batch: OnBatch | None = None, should_stop: ShouldStop | None = None
+) -> SearchResult:
+    """Run `search` with `fetch`, or with live HttpFetchers (one per Source) that are
+    closed afterwards."""
+    if fetch is not None:
+        return run_search(search, fetch, on_batch, should_stop)
+    with ExitStack() as stack:
+        http = HttpFetcher()
+        stack.callback(http.close)
+        fetchers: dict[Source, Fetch] = {}
+        for source in search.sources:
+            fetcher = SOURCES[source].make_fetcher()
+            stack.callback(fetcher.close)
+            fetchers[source] = fetcher
+        return _run(search, fetchers, http, on_batch, should_stop)
+
+
+def _run(
+    search: Search,
+    fetchers: dict[Source, Fetch],
+    fetch: Fetch,
+    on_batch: OnBatch | None,
+    should_stop: ShouldStop | None,
+) -> SearchResult:
+    """Run every chosen Source. A Source with no entry in `fetchers` uses `fetch`, which
+    is also Craigslist's."""
+    if not search.owner_types and not search.sources:
+        raise SearchError(f"choose at least one of {_choices()}")
     city = _city(search)
 
+    # --- Craigslist
     listings: list[Listing] = []
     requests = 0
     error: ListingSourceError | None = None
@@ -80,63 +110,41 @@ def run_search(
         listings += source_result.listings
         requests += source_result.requests
         error = source_result.error
-        cancelled = cancelled or source_result.cancelled
+        cancelled = source_result.cancelled
         reported_totals = source_result.reported_totals
 
-    carfax_listings: list[Listing] = []
-    carfax_requests = 0
-    carfax_error: ListingSourceError | None = None
-    carfax_reported_total = 0
-    if search.carfax:
-        carfax_search = CarfaxSearch(city, search.make, search.model)
-        carfax_result = search_carfax(carfax_search, fetch, on_batch, should_stop)
-        carfax_listings = carfax_result.listings
-        carfax_requests = carfax_result.requests
-        carfax_error = carfax_result.error
-        cancelled = cancelled or carfax_result.cancelled
-        carfax_reported_total = carfax_result.reported_total
+    # --- Other Sources
+    by_source: dict[Source, list[Listing]] = {}
+    source_totals: dict[Source, int] = {}
+    source_errors: dict[Source, ListingSourceError] = {}
+    for source in search.sources:
+        found = SOURCES[source].search(
+            city, search.make, search.model, fetchers.get(source, fetch), on_batch, should_stop
+        )
+        by_source[source] = found.listings
+        listings += found.listings
+        requests += found.requests
+        cancelled = cancelled or found.cancelled
+        source_totals[source] = found.reported_total
+        if found.error is not None:
+            source_errors[source] = found.error
 
-    listings += carfax_listings
+    # --- Price Curves
     curves = {
         owner_type: fit_price_curve(
-            (listing.mileage, listing.price) for listing in listings if listing.owner_type == owner_type
+            (listing.mileage, listing.price)
+            for listing in listings
+            if listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type
         )
         for owner_type in search.owner_types
     }
-    carfax_curve = (
-        fit_price_curve((listing.mileage, listing.price) for listing in carfax_listings) if search.carfax else None
-    )
+    source_curves = {
+        source: fit_price_curve((listing.mileage, listing.price) for listing in found)
+        for source, found in by_source.items()
+    }
     return SearchResult(
-        listings,
-        curves,
-        reported_totals,
-        carfax_curve,
-        carfax_reported_total,
-        requests + carfax_requests,
-        error,
-        carfax_error,
-        cancelled,
+        listings, curves, reported_totals, source_curves, source_totals, requests, error, source_errors, cancelled
     )
-
-
-def run_live_search(
-    search: Search, fetch: Fetch | None = None, on_batch: OnBatch | None = None, should_stop: ShouldStop | None = None
-) -> SearchResult:
-    """Run `search` with `fetch`, or with live HttpFetchers (one per Source) that are
-    closed afterwards."""
-    if fetch is not None:
-        return run_search(search, fetch, on_batch, should_stop)
-    http = HttpFetcher()
-    carfax_http = CarfaxHttpFetcher()
-
-    def dispatch(url: str) -> str:
-        return carfax_http(url) if "carfax.com" in url else http(url)
-
-    try:
-        return run_search(search, dispatch, on_batch, should_stop)
-    finally:
-        http.close()
-        carfax_http.close()
 
 
 def _city(search: Search) -> lookup.City:

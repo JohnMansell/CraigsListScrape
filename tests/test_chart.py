@@ -1,7 +1,5 @@
 from craigslist.chart import (
     plotted_listings,
-    CARFAX_COLOR,
-    CARFAX_NAME,
     DEALER_COLOR,
     OWNER_COLOR,
     chart_options,
@@ -16,6 +14,9 @@ from craigslist.chart import (
 from craigslist.curve import CurvePoint, NotEnoughData, PriceCurve
 from craigslist.listings import Listing, ListingSourceError, OwnerType, Source
 from craigslist.search import Search, SearchResult
+from craigslist.sources import SOURCES
+
+CARFAX = SOURCES[Source.CARFAX]
 
 
 def listing(post_id: int, owner_type: OwnerType, mileage: int | None, price: int = 10_000) -> Listing:
@@ -39,7 +40,7 @@ def curve(*points: tuple[float, float]) -> PriceCurve:
     )
 
 
-SEARCH = Search("CA", "Orange County", "Honda", "Civic", carfax=False)
+SEARCH = Search("CA", "Orange County", "Honda", "Civic", sources=())
 
 
 def series_named(options: dict, name: str) -> dict:
@@ -78,7 +79,7 @@ def test_listings_without_mileage_are_left_off_the_chart():
         {OwnerType.OWNER: 2},
     )
 
-    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), carfax=False), result)
+    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=()), result)
 
     assert series_named(options, "Owner")["data"] == [[10_000, 10_000]]
 
@@ -86,7 +87,7 @@ def test_listings_without_mileage_are_left_off_the_chart():
 def test_owner_types_not_searched_and_unfitted_curves_are_not_drawn():
     result = SearchResult([listing(1, OwnerType.OWNER, 10_000)], {OwnerType.OWNER: NotEnoughData("too few")}, {})
 
-    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), carfax=False), result)
+    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=()), result)
 
     assert [series["name"] for series in options["series"]] == ["Owner", "Pinned listing"]
 
@@ -130,7 +131,7 @@ def test_failure_banner_is_absent_without_an_error():
 
 
 def test_cancelled_search_says_so_in_the_status_line():
-    search = Search("CA", "Orange County", "honda", "civic", (OwnerType.OWNER,), carfax=False)
+    search = Search("CA", "Orange County", "honda", "civic", (OwnerType.OWNER,), sources=())
     result = SearchResult([listing(1, OwnerType.OWNER, 1_000)], {}, {}, cancelled=True)
 
     assert status_text(search, result) == "Cancelled. 1 listings: 1 owner"
@@ -138,12 +139,12 @@ def test_cancelled_search_says_so_in_the_status_line():
 
 
 def test_a_stopped_search_with_no_listings_is_not_reported_as_empty():
-    search = Search("CA", "Orange County", "honda", "civic", carfax=False)
+    search = Search("CA", "Orange County", "honda", "civic", sources=())
 
     assert empty_message(search, SearchResult([], {}, {}, cancelled=True)) == "No listings arrived before the Search stopped."
 
 
-OWNER_ONLY = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), carfax=False)
+OWNER_ONLY = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=())
 
 
 def test_default_range_comes_from_the_kept_points_with_padding():
@@ -219,7 +220,7 @@ def test_too_few_points_for_a_curve_gets_a_note_per_owner_type():
 
 
 def test_a_type_that_was_not_fetched_gets_a_search_again_message():
-    fetched = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), carfax=False)
+    fetched = Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=())
 
     assert unfetched_message(fetched, [OwnerType.OWNER, OwnerType.DEALER]) == "Search again to load dealer listings"
     assert unfetched_message(fetched, [OwnerType.OWNER]) is None
@@ -263,7 +264,7 @@ def test_a_pinned_listing_without_mileage_gets_no_ring():
 def test_points_have_no_tooltip_and_the_cursor_draws_a_line_to_each_axis():
     result = SearchResult([listing(1, OwnerType.OWNER, 50_000, 12_000)], {}, {OwnerType.OWNER: 1})
 
-    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), carfax=False), result)
+    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=()), result)
 
     assert "tooltip" not in options
     assert all("tooltip" not in series for series in options["series"])
@@ -276,7 +277,7 @@ def test_points_have_no_tooltip_and_the_cursor_draws_a_line_to_each_axis():
 # Carfax
 
 
-CARFAX_SEARCH = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), carfax=True)
+CARFAX_SEARCH = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), sources=(Source.CARFAX,))
 
 
 def test_carfax_series_is_hollow_and_told_apart_from_dealer_by_source():
@@ -286,34 +287,34 @@ def test_carfax_series_is_hollow_and_told_apart_from_dealer_by_source():
 
     options = chart_options(CARFAX_SEARCH, result)
 
-    dealer, carfax = series_named(options, "Dealer"), series_named(options, CARFAX_NAME)
+    dealer, carfax = series_named(options, "Dealer"), series_named(options, CARFAX.name)
     assert dealer["data"] == [[80_000, 9_000]]
     assert carfax["data"] == [[60_000, 11_000]]
     assert carfax["itemStyle"]["color"] == "transparent"
-    assert carfax["itemStyle"]["borderColor"] == CARFAX_COLOR
-    assert CARFAX_COLOR not in (OWNER_COLOR, DEALER_COLOR)
+    assert carfax["itemStyle"]["borderColor"] == CARFAX.color
+    assert CARFAX.color not in (OWNER_COLOR, DEALER_COLOR)
 
 
 def test_carfax_curve_is_drawn_when_fitted():
     result = SearchResult(
-        [carfax_listing(1, 10_000, 20_000)], {}, {}, carfax_curve=curve((0, 25_000), (100_000, 10_000))
+        [carfax_listing(1, 10_000, 20_000)], {}, {}, source_curves={Source.CARFAX: curve((0, 25_000), (100_000, 10_000))}
     )
 
     options = chart_options(CARFAX_SEARCH, result)
 
-    carfax_curve_series = series_named(options, f"{CARFAX_NAME} curve")
+    carfax_curve_series = series_named(options, f"{CARFAX.name} curve")
     assert carfax_curve_series["type"] == "line"
     assert carfax_curve_series["data"] == [[0, 25_000], [100_000, 10_000]]
-    assert carfax_curve_series["lineStyle"]["color"] == CARFAX_COLOR
+    assert carfax_curve_series["lineStyle"]["color"] == CARFAX.color
 
 
 def test_carfax_series_and_legend_are_absent_when_the_search_excludes_it():
     result = SearchResult([carfax_listing(1, 10_000)], {}, {})
 
-    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), carfax=False), result)
+    options = chart_options(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), sources=()), result)
 
-    assert all(series["name"] != CARFAX_NAME for series in options["series"])
-    assert CARFAX_NAME not in options["legend"]["data"]
+    assert all(series["name"] != CARFAX.name for series in options["series"])
+    assert CARFAX.name not in options["legend"]["data"]
 
 
 def test_status_text_includes_the_carfax_count():
@@ -323,7 +324,7 @@ def test_status_text_includes_the_carfax_count():
 
 
 def test_curve_notes_includes_carfax_when_it_has_too_few_points():
-    result = SearchResult([], {}, {}, carfax_curve=NotEnoughData("too few"))
+    result = SearchResult([], {}, {}, source_curves={Source.CARFAX: NotEnoughData("too few")})
 
     assert curve_notes(CARFAX_SEARCH, result) == ["Too few Carfax listings for a curve"]
 
@@ -331,16 +332,16 @@ def test_curve_notes_includes_carfax_when_it_has_too_few_points():
 def test_default_range_includes_carfax_points_without_a_curve():
     result = SearchResult([carfax_listing(1, 0, 1_000), carfax_listing(2, 100, 2_000)], {}, {})
 
-    view = default_range(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), carfax=True), result)
+    view = default_range(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), sources=(Source.CARFAX,)), result)
 
     assert view is not None
     assert view.max_price > 2_000 and view.min_price < 1_000
 
 
 def test_default_range_uses_the_carfax_curve_when_fitted():
-    result = SearchResult([], {}, {}, carfax_curve=curve((10_000, 20_000), (110_000, 8_000)))
+    result = SearchResult([], {}, {}, source_curves={Source.CARFAX: curve((10_000, 20_000), (110_000, 8_000))})
 
-    view = default_range(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), carfax=True), result)
+    view = default_range(Search("CA", "Orange County", "Honda", "Civic", owner_types=(), sources=(Source.CARFAX,)), result)
 
     assert view is not None
     assert (view.min_miles, view.max_miles) == (5_000, 115_000)
@@ -350,10 +351,10 @@ def test_failure_banner_reports_carfax_and_craigslist_failures_independently():
     craigslist_only = SearchResult([], {}, {}, requests=2, error=ListingSourceError("HTTP 429"))
     assert failure_banner(craigslist_only) == "Craigslist stopped answering after 2 requests. Showing 0 listings; there may be more."
 
-    carfax_only = SearchResult([], {}, {}, carfax_error=ListingSourceError("HTTP 500"))
+    carfax_only = SearchResult([], {}, {}, source_errors={Source.CARFAX: ListingSourceError("HTTP 500")})
     assert failure_banner(carfax_only) == "Carfax stopped answering. Showing 0 listings; there may be more."
 
-    both = SearchResult([], {}, {}, requests=1, error=ListingSourceError("HTTP 429"), carfax_error=ListingSourceError("HTTP 500"))
+    both = SearchResult([], {}, {}, requests=1, error=ListingSourceError("HTTP 429"), source_errors={Source.CARFAX: ListingSourceError("HTTP 500")})
     assert both is not None and "Craigslist" in failure_banner(both) and "Carfax" in failure_banner(both)
 
 
@@ -363,7 +364,7 @@ def test_plotted_listings_includes_a_carfax_bucket():
 
     plotted = plotted_listings(CARFAX_SEARCH, result)
 
-    assert plotted == {"Dealer": [dealer], CARFAX_NAME: [found]}
+    assert plotted == {"Dealer": [dealer], CARFAX.name: [found]}
 
 
 def test_pin_ring_matches_a_carfax_listing():
@@ -376,7 +377,7 @@ def test_pin_ring_matches_a_carfax_listing():
 
 
 def test_unfetched_message_names_carfax():
-    fetched = Search("CA", "Orange County", "Honda", "Civic", owner_types=(), carfax=False)
+    fetched = Search("CA", "Orange County", "Honda", "Civic", owner_types=(), sources=())
 
-    assert unfetched_message(fetched, [], wanted_carfax=True) == "Search again to load carfax listings"
-    assert unfetched_message(fetched, [], wanted_carfax=False) is None
+    assert unfetched_message(fetched, [], [Source.CARFAX]) == "Search again to load carfax listings"
+    assert unfetched_message(fetched, [], []) is None

@@ -8,7 +8,7 @@ import queue
 import secrets
 import threading
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -38,6 +38,7 @@ from craigslist.preview import (
     preview_content,
 )
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
+from craigslist.sources import SOURCES, choices_text
 
 HOST = "127.0.0.1"
 """Local only until the Linode ticket adds a --host flag."""
@@ -48,7 +49,7 @@ TITLE = "Craigslist car prices"
 STORAGE_DIR = Path(".nicegui")
 """NiceGUI's per-browser storage files, and the generated secret that signs the browser cookie."""
 SEARCH_KEYS = ("state", "city", "make", "model")
-FLAG_KEYS = ("owner", "dealer", "carfax")
+FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
 
 
@@ -62,14 +63,16 @@ class SearchForm:
     model: str | None = None
     owner: bool = True
     dealer: bool = True
-    carfax: bool = True
+    sources: dict[Source, bool] = field(default_factory=lambda: {source: info.default for source, info in SOURCES.items()})
+    """Whether each other source's checkbox is ticked."""
 
     @classmethod
     def from_query(cls, params: Mapping[str, str]) -> "SearchForm":
         """A form filled from URL query parameters, keeping only values the lookup tables know.
 
         Matching ignores case and takes the lookup spelling. A city is kept only under a known
-        state, a model only under a known make. A missing or unreadable checkbox is checked.
+        state, a model only under a known make. A missing or unreadable checkbox takes its default
+        (checked, for every source so far).
         """
         form = cls()
         state = _known(params.get("state"), lookup.states())
@@ -82,7 +85,10 @@ class SearchForm:
             form.model = _known(params.get("model"), form.model_options())
         form.owner = params.get("owner", "1").strip().casefold() not in FALSE_WORDS
         form.dealer = params.get("dealer", "1").strip().casefold() not in FALSE_WORDS
-        form.carfax = params.get("carfax", "1").strip().casefold() not in FALSE_WORDS
+        form.sources = {
+            source: params.get(info.query_key, "1" if info.default else "0").strip().casefold() not in FALSE_WORDS
+            for source, info in SOURCES.items()
+        }
         return form
 
     def to_query(self) -> dict[str, str]:
@@ -92,7 +98,7 @@ class SearchForm:
             **chosen,
             "owner": "1" if self.owner else "0",
             "dealer": "1" if self.dealer else "0",
-            "carfax": "1" if self.carfax else "0",
+            **{SOURCES[source].query_key: "1" if checked else "0" for source, checked in self.sources.items()},
         }
 
     def choose_state(self, state: str | None) -> None:
@@ -109,12 +115,15 @@ class SearchForm:
     def model_options(self) -> list[str]:
         return lookup.models(self.make) if self.make else []
 
+    def chosen_sources(self) -> tuple[Source, ...]:
+        return tuple(source for source, checked in self.sources.items() if checked)
+
     def problem(self) -> str | None:
         """Why Search is disabled, or None when it can run."""
         if not (self.state and self.city and self.make and self.model):
             return "Pick a state, city, make, and model"
-        if not (self.owner or self.dealer or self.carfax):
-            return "Pick owner, dealer, or carfax"
+        if not (self.owner or self.dealer or any(self.sources.values())):
+            return _pick_message()
         return None
 
     def search(self) -> Search:
@@ -124,7 +133,11 @@ class SearchForm:
             for owner_type, checked in ((OwnerType.OWNER, self.owner), (OwnerType.DEALER, self.dealer))
             if checked
         )
-        return Search(self.state, self.city, self.make, self.model, owner_types, self.carfax)
+        return Search(self.state, self.city, self.make, self.model, owner_types, self.chosen_sources())
+
+
+def _pick_message() -> str:
+    return "Pick " + choices_text(["owner", "dealer", *(info.name.casefold() for info in SOURCES.values())])
 
 
 def has_search_params(params: Mapping[str, str]) -> bool:
@@ -229,8 +242,8 @@ def search_page(request: Request) -> None:
         refresh_search_button()
         redraw()
 
-    def carfax_changed(checked: bool) -> None:
-        form.carfax = checked
+    def source_changed(source: Source, checked: bool) -> None:
+        form.sources[source] = checked
         remember()
         refresh_search_button()
         redraw()
@@ -374,8 +387,9 @@ def search_page(request: Request) -> None:
         reset_button.set_visibility(False)
         curve_note.set_visibility(False)
         empty_label.set_visibility(False)
-        sources = [name for name, chosen in (("Craigslist", search.owner_types), ("Carfax", search.carfax)) if chosen]
-        status.set_text(f"Searching {' and '.join(sources)} for {search.make} {search.model} in {search.city}...")
+        names = ["Craigslist"] if search.owner_types else []
+        names += [SOURCES[source].name for source in search.sources]
+        status.set_text(f"Searching {' and '.join(names)} for {search.make} {search.model} in {search.city}...")
         timer.activate()
         try:
             result = await run.io_bound(run_live_search, search, None, arrived.put, stop.is_set)
@@ -407,13 +421,15 @@ def search_page(request: Request) -> None:
         nonlocal shown_search, shown_result
         wanted = {OwnerType.OWNER: form.owner, OwnerType.DEALER: form.dealer}
         search = replace(
-            fetched, owner_types=tuple(t for t in fetched.owner_types if wanted[t]), carfax=fetched.carfax and form.carfax
+            fetched,
+            owner_types=tuple(t for t in fetched.owner_types if wanted[t]),
+            sources=tuple(s for s in fetched.sources if form.sources[s]),
         )
         shown_search, shown_result = search, result
-        missing = unfetched_message(fetched, [t for t, checked in wanted.items() if checked], wanted_carfax=form.carfax)
+        missing = unfetched_message(fetched, [t for t, checked in wanted.items() if checked], form.chosen_sources())
         message = empty_message(search, result) if final else None
-        if not search.owner_types and not search.carfax:
-            message = missing or "Pick owner, dealer, or carfax"
+        if not search.owner_types and not search.sources:
+            message = missing or _pick_message()
             missing = None
         chart.set_visibility(message is None and bool(result.listings))
         empty_label.set_visibility(message is not None)
@@ -438,7 +454,7 @@ def search_page(request: Request) -> None:
         text = failure_banner(result)
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
-        if search.owner_types or search.carfax:
+        if search.owner_types or search.sources:
             status.set_text(status_text(search, result) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
@@ -450,7 +466,8 @@ def search_page(request: Request) -> None:
             model_select = ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value)).classes("w-44")
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
-            ui.checkbox("Carfax", value=form.carfax, on_change=lambda e: carfax_changed(e.value))
+            for source, info in SOURCES.items():
+                ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
