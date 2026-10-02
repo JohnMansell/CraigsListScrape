@@ -6,7 +6,7 @@ import pytest
 
 from craigslist.curve import NotEnoughData, PriceCurve
 from craigslist import listings
-from craigslist.listings import Listing, ListingSourceError, OwnerType
+from craigslist.listings import Listing, ListingSourceError, OwnerType, Source
 from craigslist.search import Search, SearchError, run_live_search, run_search
 
 
@@ -85,7 +85,7 @@ def paged_responses(monkeypatch) -> dict[str, str]:
     }
 
 
-OWNER_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.OWNER,))
+OWNER_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.OWNER,), carfax=False)
 
 
 def test_run_search_reports_each_batch_and_they_add_up_to_the_listings(paged_responses):
@@ -135,6 +135,98 @@ def test_run_search_stops_when_asked(paged_responses):
 def test_run_live_search_uses_the_given_fetcher():
     dealer_full = fixture("dealer_full.json")
 
-    result = run_live_search(Search("CA", "Orange County", "honda", "civic", (OwnerType.DEALER,)), lambda url: dealer_full)
+    result = run_live_search(
+        Search("CA", "Orange County", "honda", "civic", (OwnerType.DEALER,), carfax=False), lambda url: dealer_full
+    )
 
     assert {listing.owner_type for listing in result.listings} == {OwnerType.DEALER}
+
+
+# Carfax
+
+
+def dual_fetch(craigslist_response: str, carfax_response: str):
+    def fetch(url: str) -> str:
+        return carfax_response if "carfax.com" in url else craigslist_response
+
+    return fetch
+
+
+BOTH_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.DEALER,))
+
+
+def test_run_search_includes_carfax_listings_alongside_craigslist():
+    result = run_search(BOTH_SEARCH, dual_fetch(fixture("dealer_full.json"), fixture("carfax_last_page.json")))
+
+    assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX}
+    assert sum(listing.source == Source.CARFAX for listing in result.listings) == 9
+    assert all(listing.owner_type == OwnerType.DEALER for listing in result.listings if listing.source == Source.CARFAX)
+
+
+def test_carfax_has_its_own_curve_separate_from_the_dealer_curve():
+    result = run_search(BOTH_SEARCH, dual_fetch(fixture("dealer_full.json"), fixture("carfax_page_1.json")))
+
+    assert isinstance(result.carfax_curve, PriceCurve)
+    assert isinstance(result.curves[OwnerType.DEALER], PriceCurve)
+    carfax_prices = {listing.price for listing in result.listings if listing.source == Source.CARFAX}
+    dealer_prices = {listing.price for listing in result.listings if listing.source == Source.CRAIGSLIST}
+    assert carfax_prices and dealer_prices and carfax_prices != dealer_prices
+
+
+def test_a_car_in_both_sources_is_not_deduplicated():
+    result = run_search(BOTH_SEARCH, dual_fetch(fixture("dealer_full.json"), fixture("carfax_last_page.json")))
+
+    ids = [listing.id for listing in result.listings]
+    assert len(ids) == len(set(ids))  # unique across Sources
+    assert len(result.listings) == 19 + 9  # dealer_full has one result with no price
+
+
+def test_a_carfax_failure_keeps_the_craigslist_listings():
+    def fetch(url: str) -> str:
+        if "carfax.com" in url:
+            raise ListingSourceError("HTTP 500")
+        return fixture("dealer_full.json")
+
+    result = run_search(BOTH_SEARCH, fetch)
+
+    assert isinstance(result.carfax_error, ListingSourceError)
+    assert result.error is None
+    assert all(listing.source == Source.CRAIGSLIST for listing in result.listings)
+    assert len(result.listings) == 19
+
+
+def test_a_craigslist_failure_keeps_the_carfax_listings():
+    def fetch(url: str) -> str:
+        if "carfax.com" in url:
+            return fixture("carfax_last_page.json")
+        raise ListingSourceError("HTTP 500")
+
+    result = run_search(BOTH_SEARCH, fetch)
+
+    assert isinstance(result.error, ListingSourceError)
+    assert result.carfax_error is None
+    assert all(listing.source == Source.CARFAX for listing in result.listings)
+    assert len(result.listings) == 9
+
+
+def test_should_stop_stops_both_sources():
+    result = run_search(BOTH_SEARCH, dual_fetch(fixture("dealer_full.json"), fixture("carfax_last_page.json")), should_stop=lambda: True)
+
+    assert result.cancelled
+    assert result.listings == []
+    assert result.requests == 0
+
+
+def test_a_search_with_neither_owner_type_nor_carfax_is_rejected():
+    with pytest.raises(SearchError, match="at least one"):
+        run_search(Search("CA", "Orange County", "honda", "civic", owner_types=(), carfax=False), lambda url: "")
+
+
+def test_carfax_alone_needs_no_owner_type():
+    result = run_search(
+        Search("CA", "Orange County", "honda", "civic", owner_types=(), carfax=True),
+        lambda url: fixture("carfax_last_page.json"),
+    )
+
+    assert len(result.listings) == 9
+    assert result.curves == {}

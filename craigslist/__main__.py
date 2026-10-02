@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None, fetch: Fetch | None = None) -> None:
     if args.command == "listings":
         owner_types = (OwnerType(args.owner_type),) if args.owner_type else tuple(OwnerType)
         try:
-            print_listings(Search(args.state, args.city, args.make, args.model, owner_types), fetch)
+            print_listings(Search(args.state, args.city, args.make, args.model, owner_types, carfax=False), fetch)
         except SearchError as error:
             parser.error(str(error))
     elif args.command == "carfax":
