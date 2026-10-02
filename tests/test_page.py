@@ -24,11 +24,19 @@ def test_search_is_blocked_until_every_dropdown_is_chosen(field):
     assert form.problem() == "Pick a state, city, make, and model"
 
 
-def test_search_is_blocked_with_both_owner_types_unchecked():
+def test_search_is_blocked_with_owner_dealer_and_carfax_all_unchecked():
+    form = complete_form()
+    form.owner = form.dealer = form.carfax = False
+
+    assert form.problem() == "Pick owner, dealer, or carfax"
+
+
+def test_carfax_alone_is_enough_to_search():
     form = complete_form()
     form.owner = form.dealer = False
 
-    assert form.problem() == "Pick owner, dealer, or both"
+    assert form.problem() is None
+    assert form.search() == Search("CA", "Orange County", "Honda", "Civic", (), True)
 
 
 def test_one_owner_type_searches_only_that_type():
@@ -73,6 +81,12 @@ def test_a_link_with_a_full_search_fills_the_form_with_lookup_spelling():
     assert form.problem() is None
 
 
+def test_a_link_can_turn_off_carfax():
+    form = SearchForm.from_query({"state": "CA", "city": "Orange County", "make": "Honda", "model": "Civic", "carfax": "0"})
+
+    assert form == SearchForm("CA", "Orange County", "Honda", "Civic", carfax=False)
+
+
 def test_a_link_with_unknown_values_fills_what_it_can():
     form = SearchForm.from_query({"state": "CA", "city": "Atlantis", "make": "Zorblat", "model": "Civic"})
 
@@ -91,33 +105,36 @@ def test_a_known_make_keeps_a_model_only_if_the_make_has_it():
     assert SearchForm.from_query({"make": "Acura", "model": "ILX"}).model == "ILX"
 
 
-def test_a_link_with_no_checkbox_or_an_unreadable_one_checks_both():
-    assert SearchForm.from_query({}).owner and SearchForm.from_query({}).dealer
-    form = SearchForm.from_query({"owner": "maybe", "dealer": "FALSE"})
-    assert form.owner and not form.dealer
+def test_a_link_with_no_checkbox_or_an_unreadable_one_checks_all_three():
+    defaults = SearchForm.from_query({})
+    assert defaults.owner and defaults.dealer and defaults.carfax
+    form = SearchForm.from_query({"owner": "maybe", "dealer": "FALSE", "carfax": "off"})
+    assert form.owner and not form.dealer and not form.carfax
 
 
 def test_the_query_round_trips_through_the_form():
     form = complete_form()
     form.owner = False
+    form.carfax = False
 
     assert SearchForm.from_query(form.to_query()) == form
-    assert SearchForm().to_query() == {"owner": "1", "dealer": "1"}
+    assert SearchForm().to_query() == {"owner": "1", "dealer": "1", "carfax": "1"}
 
 
 def test_changing_a_dropdown_keeps_the_checkboxes():
     form = complete_form()
-    form.owner = False
+    form.owner, form.carfax = False, False
 
     form.choose_state("TX")
     form.choose_make("Acura")
 
-    assert (form.owner, form.dealer) == (False, True)
+    assert (form.owner, form.dealer, form.carfax) == (False, True, False)
 
 
 def test_only_a_url_naming_a_search_overrides_the_browsers_memory():
     assert has_search_params({"make": "Honda"})
     assert has_search_params({"dealer": "0"})
+    assert has_search_params({"carfax": "0"})
     assert not has_search_params({"utm": "x"})
 
 

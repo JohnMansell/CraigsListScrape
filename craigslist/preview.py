@@ -2,13 +2,14 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from craigslist.listings import Fetch, HttpFetcher, Listing, listing_attributes
+from craigslist.listings import Fetch, HttpFetcher, Listing, Source, listing_attributes
 from craigslist.search import Search, SearchResult
 
 LOADING_TEXT = "Loading details from the listing..."
 EMPTY_TEXT = "No details available"
 IDLE_TEXT = "Hover a point to preview it. Click a point to pin it."
 UNKNOWN_MILEAGE = "Mileage not listed"
+LINK_LABELS = {Source.CRAIGSLIST: "Open on Craigslist", Source.CARFAX: "Open on Carfax"}
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,16 @@ class PreviewContent:
     image: str | None
     """A hotlinked 600x450 photo URL, or None so the panel draws no image block."""
     url: str
+    link_label: str
+    """"Open on Craigslist" or "Open on Carfax"."""
+    dealer: str | None
+    """The dealer's name. Carfax only; None for a Craigslist Listing."""
+    owners: str | None
+    """"One owner" or "Previous owners". Carfax only; None for a Craigslist Listing."""
+    accidents: str | None
+    """"No accidents reported" or "Accident reported". Carfax only; None for a Craigslist Listing."""
+    price_drop: str | None
+    """A note when Carfax's price history has a drop. None otherwise."""
 
 
 def preview_content(listing: Listing) -> PreviewContent:
@@ -39,7 +50,24 @@ def preview_content(listing: Listing) -> PreviewContent:
         location=listing.location or None,
         image=listing.images[0] if listing.images else None,
         url=listing.url,
+        link_label=LINK_LABELS[listing.source],
+        dealer=listing.dealer,
+        owners=_owners_text(listing.one_owner),
+        accidents=_accidents_text(listing.no_accidents),
+        price_drop="Price dropped" if listing.price_dropped else None,
     )
+
+
+def _owners_text(one_owner: bool | None) -> str | None:
+    if one_owner is None:
+        return None
+    return "One owner" if one_owner else "Previous owners"
+
+
+def _accidents_text(no_accidents: bool | None) -> str | None:
+    if no_accidents is None:
+        return None
+    return "No accidents reported" if no_accidents else "Accident reported"
 
 
 def posted_text(posted: datetime | None) -> str | None:
@@ -50,11 +78,14 @@ def posted_text(posted: datetime | None) -> str | None:
 
 
 def no_mileage_listings(shown: Search, result: SearchResult) -> list[Listing]:
-    """The Listings of the shown owner types that are left off the chart for having no mileage."""
+    """The Listings of the shown Sources that are left off the chart for having no mileage."""
     return [
         listing
         for listing in result.listings
-        if listing.mileage is None and listing.owner_type in shown.owner_types
+        if listing.mileage is None and (
+            (listing.source == Source.CRAIGSLIST and listing.owner_type in shown.owner_types)
+            or (listing.source == Source.CARFAX and shown.carfax)
+        )
     ]
 
 
@@ -77,8 +108,12 @@ def detail_lines(details: dict[str, str] | None) -> list[str] | str:
 def load_details(listing: Listing, fetch: Fetch | None = None) -> dict[str, str]:
     """Fetch `listing`'s detail page attributes. Blocking, so run it off the UI thread.
 
-    With no `fetch`, uses a live HttpFetcher that is closed afterwards.
+    With no `fetch`, uses a live HttpFetcher that is closed afterwards. A Carfax Listing
+    already carries every detail Preview shows; `www.carfax.com` is DataDome-blocked
+    anyway, so this never requests it.
     """
+    if listing.source == Source.CARFAX:
+        return {}
     if fetch is not None:
         return listing_attributes(listing, fetch)
     http = HttpFetcher()

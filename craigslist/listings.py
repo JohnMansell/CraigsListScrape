@@ -100,6 +100,14 @@ class Listing:
     """Timezone-aware UTC. None when the response does not carry it."""
     location: str | None = None
     """The seller-typed location text, typos included. None when the response does not carry it."""
+    dealer: str | None = None
+    """The dealer's name. Carfax only; None for Craigslist."""
+    one_owner: bool | None = None
+    """Carfax's `oneOwner`. None for Craigslist."""
+    no_accidents: bool | None = None
+    """Carfax's `noAccidents`. None for Craigslist."""
+    price_dropped: bool | None = None
+    """Carfax's price history has a drop. None for Craigslist."""
 
 
 @dataclass(frozen=True)

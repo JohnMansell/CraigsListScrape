@@ -79,6 +79,28 @@ def test_a_listing_carries_title_price_mileage_url_and_image():
     assert listing.images == tuple(item["images"]["large"])
     assert listing.location == f"{item['dealer']['city']}, {item['dealer']['state']}"
     assert listing.posted is not None and listing.posted.isoformat().startswith(item["firstSeen"])
+    assert listing.dealer == item["dealer"]["name"]
+    assert listing.one_owner == item["oneOwner"]
+    assert listing.no_accidents == item["noAccidents"]
+    assert listing.price_dropped is True  # the fixture's price history has a drop
+
+
+def test_a_listing_with_no_price_drop_in_its_history_gets_false():
+    item = dict(fixture("carfax_page_1.json")["listings"][1])
+    item["priceHistory"] = [{"listPrice": 20_000, "date": "08/15/2026"}]
+
+    listing = carfax._parse_item(item)
+
+    assert listing is not None and listing.price_dropped is False
+
+
+def test_a_listing_with_no_price_history_gets_none():
+    item = dict(fixture("carfax_page_1.json")["listings"][1])
+    del item["priceHistory"]
+
+    listing = carfax._parse_item(item)
+
+    assert listing is not None and listing.price_dropped is None
 
 
 def test_a_result_with_no_price_is_skipped_and_logged(log_messages):

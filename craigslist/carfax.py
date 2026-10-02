@@ -221,8 +221,12 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
 
     mileage = item.get("mileage")
     images = _images(item.get("images"))
-    location = _dealer_location(item.get("dealer"))
+    dealer = item.get("dealer")
+    location = _dealer_location(dealer)
+    dealer_name = dealer.get("name") if isinstance(dealer, dict) else None
     posted = _first_seen(item.get("firstSeen"))
+    one_owner = item.get("oneOwner")
+    no_accidents = item.get("noAccidents")
 
     return Listing(
         id=f"{Source.CARFAX}:{item_id}",
@@ -235,6 +239,10 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         owner_type=OwnerType.DEALER,
         posted=posted,
         location=location,
+        dealer=dealer_name if isinstance(dealer_name, str) else None,
+        one_owner=one_owner if isinstance(one_owner, bool) else None,
+        no_accidents=no_accidents if isinstance(no_accidents, bool) else None,
+        price_dropped=_price_dropped(item.get("priceHistory")),
     )
 
 
@@ -252,6 +260,15 @@ def _dealer_location(dealer: Any) -> str | None:
         return None
     city, state = dealer.get("city"), dealer.get("state")
     return f"{city}, {state}" if isinstance(city, str) and isinstance(state, str) else None
+
+
+def _price_dropped(price_history: Any) -> bool | None:
+    """True when any entry's `difference` is negative (a price drop). None when the
+    response carries no price history at all."""
+    if not isinstance(price_history, list):
+        return None
+    differences = [entry.get("difference") for entry in price_history if isinstance(entry, dict)]
+    return any(isinstance(difference, (int, float)) and difference < 0 for difference in differences)
 
 
 def _first_seen(first_seen: Any) -> datetime | None:

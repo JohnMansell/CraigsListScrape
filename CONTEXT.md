@@ -21,7 +21,7 @@ The website a Listing was found on: Craigslist or Carfax. A Search can include e
 _Avoid_: Listing source, scraper, crawler
 
 **Listing details**:
-The extra attributes a Listing's own page carries (transmission, condition, paint, title status), fetched only when asked for.
+The extra attributes a Craigslist Listing's own page carries (transmission, condition, paint, title status), fetched only when asked for. A Carfax Listing has no separate Listing details: its Search result already carries everything Preview shows (dealer, owners, accidents, a price-drop note).
 _Avoid_: Attributes, specs
 
 ## Pricing
@@ -41,5 +41,5 @@ The Listing shown in the panel beside the chart while the pointer is over its po
 _Avoid_: Tooltip, hover card
 
 **Pinned Listing**:
-The Listing a person clicked. It stays in the panel when nothing is being previewed, and its Listing details are loaded.
+The Listing a person clicked. It stays in the panel when nothing is being previewed. Its Listing details are loaded for a Craigslist Listing; a Carfax Listing needs no load, its Search result already has them.
 _Avoid_: Selected listing, active listing
