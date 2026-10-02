@@ -58,3 +58,22 @@ def carfax_model(make: str, model: str) -> str | None:
         if row["make"].casefold() == make.casefold() and row["model"].casefold() == model.casefold():
             return row["carfax_model"] or None
     return None
+
+
+def carmax_make(make: str) -> str:
+    """CarMax's slug for `make`: lowercase with spaces as hyphens ("Land Rover" is
+    `land-rover`). Not checked against CarMax's makes: use it only with a `carmax_model`
+    that is not None, because CarMax silently ignores a slug it doesn't know."""
+    return make.casefold().replace(" ", "-")
+
+
+def carmax_model(make: str, model: str) -> str | None:
+    """CarMax's slug for `make`/`model`, for `uri=/cars/<carmax_make>/<slug>`, or None when
+    CarMax has no single slug for it (or the pair isn't in the CSV at all).
+
+    The slug is CarMax's own spelling (`f150`, `cr-v`) and may be a series (`3-series`,
+    `c-class`). It must be exact, since an unknown slug returns the whole make."""
+    for row in _read_csv(MAKES_MODELS_CSV):
+        if row["make"].casefold() == make.casefold() and row["model"].casefold() == model.casefold():
+            return row["carmax_model"] or None
+    return None

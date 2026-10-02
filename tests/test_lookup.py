@@ -83,6 +83,45 @@ def test_carfax_model_lookup_ignores_case():
     assert lookup.carfax_model("HONDA", "civic") == "Civic"
 
 
+def test_carmax_model_matches_craigslists_name_lowercased_for_most_models():
+    assert lookup.carmax_model("Honda", "Civic") == "civic"
+
+
+def test_carmax_model_differs_for_a_name_carmax_spells_differently():
+    assert lookup.carmax_model("Ford", "F150") == "f150"
+    assert lookup.carmax_model("Honda", "CR-V") == "cr-v"
+    assert lookup.carmax_model("Hyundai", "Santa") == "santa-fe"
+    assert lookup.carmax_model("BMW", "3") == "3-series"
+
+
+def test_carmax_model_is_none_for_a_model_with_no_single_carmax_slug():
+    assert lookup.carmax_model("Mercedes-Benz", "GLC") is None
+    assert lookup.carmax_model("Porsche", "718") is None
+    assert lookup.carmax_model("Ferrari", "488") is None
+
+
+def test_carmax_model_is_none_for_an_unknown_make_or_model():
+    assert lookup.carmax_model("no such make", "Civic") is None
+    assert lookup.carmax_model("Honda", "no such model") is None
+
+
+def test_carmax_model_lookup_ignores_case():
+    assert lookup.carmax_model("HONDA", "civic") == "civic"
+
+
+def test_carmax_make_is_lowercase_with_hyphens():
+    assert lookup.carmax_make("Honda") == "honda"
+    assert lookup.carmax_make("Land Rover") == "land-rover"
+    assert lookup.carmax_make("Mercedes-Benz") == "mercedes-benz"
+
+
+def test_every_carmax_model_is_a_lowercase_slug():
+    for make in lookup.makes():
+        for model in lookup.models(make):
+            slug = lookup.carmax_model(make, model)
+            assert slug is None or re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug), f"{make} {model}: {slug!r}"
+
+
 def test_loader_does_not_use_pandas():
     tree = ast.parse(Path(lookup.__file__).read_text())
     imported = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
