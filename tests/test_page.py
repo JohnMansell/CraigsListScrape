@@ -1,6 +1,6 @@
 import pytest
 
-from craigslist.listings import OwnerType
+from craigslist.listings import OwnerType, Source
 from craigslist.page import SearchForm, has_search_params, storage_secret
 from craigslist.search import Search
 
@@ -26,7 +26,8 @@ def test_search_is_blocked_until_every_dropdown_is_chosen(field):
 
 def test_search_is_blocked_with_owner_dealer_and_carfax_all_unchecked():
     form = complete_form()
-    form.owner = form.dealer = form.carfax = False
+    form.owner = form.dealer = False
+    form.sources[Source.CARFAX] = False
 
     assert form.problem() == "Pick owner, dealer, or carfax"
 
@@ -36,7 +37,7 @@ def test_carfax_alone_is_enough_to_search():
     form.owner = form.dealer = False
 
     assert form.problem() is None
-    assert form.search() == Search("CA", "Orange County", "Honda", "Civic", (), True)
+    assert form.search() == Search("CA", "Orange County", "Honda", "Civic", (), (Source.CARFAX,))
 
 
 def test_one_owner_type_searches_only_that_type():
@@ -84,7 +85,16 @@ def test_a_link_with_a_full_search_fills_the_form_with_lookup_spelling():
 def test_a_link_can_turn_off_carfax():
     form = SearchForm.from_query({"state": "CA", "city": "Orange County", "make": "Honda", "model": "Civic", "carfax": "0"})
 
-    assert form == SearchForm("CA", "Orange County", "Honda", "Civic", carfax=False)
+    assert form == SearchForm("CA", "Orange County", "Honda", "Civic", sources={Source.CARFAX: False})
+
+
+def test_a_carfax_off_link_round_trips_through_the_url():
+    link = {"state": "CA", "city": "Orange County", "make": "Honda", "model": "Civic", "carfax": "0"}
+    form = SearchForm.from_query(link)
+
+    assert form.to_query() == {**link, "owner": "1", "dealer": "1"}
+    assert SearchForm.from_query(form.to_query()) == form
+    assert form.search().sources == ()
 
 
 def test_a_link_with_unknown_values_fills_what_it_can():
@@ -107,15 +117,15 @@ def test_a_known_make_keeps_a_model_only_if_the_make_has_it():
 
 def test_a_link_with_no_checkbox_or_an_unreadable_one_checks_all_three():
     defaults = SearchForm.from_query({})
-    assert defaults.owner and defaults.dealer and defaults.carfax
+    assert defaults.owner and defaults.dealer and all(defaults.sources.values())
     form = SearchForm.from_query({"owner": "maybe", "dealer": "FALSE", "carfax": "off"})
-    assert form.owner and not form.dealer and not form.carfax
+    assert form.owner and not form.dealer and not form.sources[Source.CARFAX]
 
 
 def test_the_query_round_trips_through_the_form():
     form = complete_form()
     form.owner = False
-    form.carfax = False
+    form.sources[Source.CARFAX] = False
 
     assert SearchForm.from_query(form.to_query()) == form
     assert SearchForm().to_query() == {"owner": "1", "dealer": "1", "carfax": "1"}
@@ -123,12 +133,12 @@ def test_the_query_round_trips_through_the_form():
 
 def test_changing_a_dropdown_keeps_the_checkboxes():
     form = complete_form()
-    form.owner, form.carfax = False, False
+    form.owner, form.sources[Source.CARFAX] = False, False
 
     form.choose_state("TX")
     form.choose_make("Acura")
 
-    assert (form.owner, form.dealer, form.carfax) == (False, True, False)
+    assert (form.owner, form.dealer, form.sources[Source.CARFAX]) == (False, True, False)
 
 
 def test_only_a_url_naming_a_search_overrides_the_browsers_memory():

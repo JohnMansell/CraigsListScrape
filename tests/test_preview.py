@@ -12,7 +12,7 @@ from craigslist.preview import (
 )
 from craigslist.search import Search, SearchResult
 
-SEARCH = Search("CA", "Orange County", "Honda", "Civic", carfax=False)
+SEARCH = Search("CA", "Orange County", "Honda", "Civic", sources=())
 
 
 def listing(
@@ -160,10 +160,10 @@ def test_no_mileage_listings_includes_carfax_when_shown():
     owner, found = listing(1, mileage=None), carfax_listing(2, mileage=None)
     result = SearchResult([owner, found, listing(3)], {}, {})
 
-    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), carfax=True)
+    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), sources=(Source.CARFAX,))
     assert no_mileage_listings(shown, result) == [owner, found]
 
-    not_shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), carfax=False)
+    not_shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), sources=())
     assert no_mileage_listings(not_shown, result) == [owner]
 
 
@@ -172,5 +172,5 @@ def test_no_mileage_listings_excludes_a_carfax_dealer_from_the_craigslist_dealer
     found = carfax_listing(1, mileage=None)
     result = SearchResult([found], {}, {})
 
-    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), carfax=False)
+    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), sources=())
     assert no_mileage_listings(shown, result) == []
