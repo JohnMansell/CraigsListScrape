@@ -1,0 +1,17 @@
+{
+ "totalCount": 0,
+ "take": 20,
+ "searchFailed": false,
+ "hasSearchError": false,
+ "selectedFacets": [
+  {
+   "category": "make",
+   "value": "honda"
+  },
+  {
+   "category": "model",
+   "value": "prelude"
+  }
+ ],
+ "items": []
+}
