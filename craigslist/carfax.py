@@ -210,7 +210,7 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         return None
 
     price = item.get("currentPrice")
-    if not isinstance(price, int) or isinstance(price, bool):
+    if not isinstance(price, int) or isinstance(price, bool) or price <= 0:
         logger.info("{}: skipping {} with no price: {} {} {}", API_NAME, item_id, year, make, model)
         return None
 

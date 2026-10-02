@@ -77,8 +77,8 @@ def test_carfax_command_prints_each_listing_and_the_total(tmp_path, monkeypatch,
     main(["carfax", "--state", "CA", "--city", "sf bay area", "--make", "honda", "--model", "fit"], fetch)
 
     lines = capsys.readouterr().out.splitlines()
-    assert len(lines) == 10  # 9 Listings plus the total line
-    assert lines[-1].startswith("carfax: 9 Listings, API reported total")
+    assert len(lines) == 8  # 7 Listings plus the total line
+    assert lines[-1].startswith("carfax: 7 Listings, API reported total")
 
 
 def test_carfax_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch, capsys):
