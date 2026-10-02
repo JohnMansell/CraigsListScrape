@@ -59,6 +59,13 @@ class OwnerType(StrEnum):
     DEALER = "dealer"
 
 
+class Source(StrEnum):
+    """The website a Listing was found on."""
+
+    CRAIGSLIST = "craigslist"
+    CARFAX = "carfax"
+
+
 PURVEYOR_CODES = {145: OwnerType.OWNER, 146: OwnerType.DEALER}
 """Index 2 of a `full` result. `batch` results carry no purveyor code."""
 
@@ -78,14 +85,16 @@ class Search:
 
 @dataclass(frozen=True)
 class Listing:
-    post_id: int
+    id: str
+    """Unique across Sources: `"<source>:<post id>"` for Craigslist."""
+    source: Source
     title: str
     price: int
     mileage: int | None
     """None when the seller left the odometer empty."""
     url: str
-    image_codes: tuple[str, ...]
-    """Deduplicated, in the listing's order. See `image_url` for the full URL."""
+    images: tuple[str, ...]
+    """Full, hotlinkable photo URLs, deduplicated, in the listing's order."""
     owner_type: OwnerType
     posted: datetime | None = None
     """Timezone-aware UTC. None when the response does not carry it."""
@@ -108,9 +117,17 @@ class SearchResults:
     """True when `should_stop` ended the search early. `listings` holds what arrived."""
 
 
-def image_url(code: str, size: str = "600x450") -> str:
+def _image_url(code: str, size: str = "600x450") -> str:
     """Sizes seen: 600x450, 300x300, 50x50c."""
     return f"{IMAGE_BASE}/{code}_{size}.jpg"
+
+
+def _listing_id(post_id: int) -> str:
+    return f"{Source.CRAIGSLIST}:{post_id}"
+
+
+def _post_id(listing: Listing) -> int:
+    return int(listing.id.split(":", 1)[1])
 
 
 def listing_attributes(listing: Listing, fetch: Fetch) -> dict[str, str]:
@@ -199,7 +216,7 @@ def _search_owner_type(
 ) -> None:
     page = parse_full(fetch(full_url(search, owner_type)), owner_type)
     totals[owner_type] = page.reported_total
-    results = {listing.post_id: listing for listing in page.listings}
+    results = {listing.id: listing for listing in page.listings}
     emit(list(results.values()))
     results_seen = page.result_count
     """How far into the results paging got, counting results skipped while parsing."""
@@ -215,9 +232,9 @@ def _search_owner_type(
             # Batches restart from the first result, so they repeat the `full` page.
             new: list[Listing] = []
             for listing in batch.listings:
-                if listing.post_id not in results:
-                    results[listing.post_id] = _with_details(listing, details)
-                    new.append(results[listing.post_id])
+                if listing.id not in results:
+                    results[listing.id] = _with_details(listing, details)
+                    new.append(results[listing.id])
             emit(new)
             results_seen = max(results_seen, offset + batch.result_count)
             if batch.result_count < BATCH_PAGE_SIZE:
@@ -354,12 +371,13 @@ def _parse_result(
     mileage = _first(tagged.get(TAG_ODOMETER))
     codes = (image.removeprefix("3:") for image in images if isinstance(image, str))
     return Listing(
-        post_id=post_id,
+        id=_listing_id(post_id),
+        source=Source.CRAIGSLIST,
         title=title,
         price=price,
         mileage=mileage if isinstance(mileage, int) else None,
         url=listing_url(slug, token),
-        image_codes=tuple(dict.fromkeys(codes)),
+        images=tuple(_image_url(code) for code in dict.fromkeys(codes)),
         owner_type=owner_type,
     )
 
@@ -385,7 +403,7 @@ def _posted_and_location(item: list[Any], decode: dict[str, Any]) -> tuple[datet
 
 def _with_details(listing: Listing, details: dict[int, tuple[datetime | None, str | None]]) -> Listing:
     """Fill a Listing's missing posted time and location from the step-2 short form."""
-    posted, location = details.get(listing.post_id, (None, None))
+    posted, location = details.get(_post_id(listing), (None, None))
     return replace(listing, posted=listing.posted or posted, location=listing.location or location)
 
 

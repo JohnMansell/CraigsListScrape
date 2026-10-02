@@ -38,7 +38,7 @@ class ChartRange:
     max_price: float
 
 
-def chart_options(search: Search, result: SearchResult, pinned_id: int | None = None) -> dict[str, Any]:
+def chart_options(search: Search, result: SearchResult, pinned_id: str | None = None) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
     Listings without mileage are left off. The axes fit the points the curves kept, so a
@@ -208,12 +208,12 @@ def _points(owner_type: OwnerType, result: SearchResult, view: ChartRange | None
     }
 
 
-def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pinned_id: int | None) -> dict[str, Any]:
+def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pinned_id: str | None) -> dict[str, Any]:
     """A hollow ring around the Pinned Listing's point, or no data when it is not plotted."""
     data: list[list[float]] = []
     for listings in plotted_listings(search, result).values():
         for listing in listings:
-            if listing.post_id == pinned_id and listing.mileage is not None:
+            if listing.id == pinned_id and listing.mileage is not None:
                 edge = view and _edge_point(listing.mileage, listing.price, view)
                 data.append(edge["value"] if edge else [listing.mileage, listing.price])
     return {

@@ -328,7 +328,7 @@ def search_page(request: Request) -> None:
         """Move the ring to the Pinned Listing without redrawing the points."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.post_id if pinned else None))
+            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None))
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -405,7 +405,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.post_id if pinned else None))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)

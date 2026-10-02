@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from craigslist.listings import Listing, OwnerType
+from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     EMPTY_TEXT,
     LOADING_TEXT,
@@ -19,12 +19,13 @@ def listing(
     post_id: int = 1,
     owner_type: OwnerType = OwnerType.OWNER,
     mileage: int | None = 50_000,
-    image_codes: tuple[str, ...] = (),
+    images: tuple[str, ...] = (),
     posted: datetime | None = None,
     location: str | None = None,
 ) -> Listing:
     return Listing(
-        post_id, f"car {post_id}", 12_500, mileage, f"https://example.org/{post_id}", image_codes, owner_type, posted, location
+        str(post_id), Source.CRAIGSLIST, f"car {post_id}", 12_500, mileage, f"https://example.org/{post_id}",
+        images, owner_type, posted, location,
     )
 
 
@@ -34,7 +35,7 @@ DETAIL_PAGE = """<div class="postinginfo">post id: 123</div>
 
 def test_content_from_a_full_listing():
     full = listing(
-        image_codes=("00a_abc", "00b_def"),
+        images=("https://images.craigslist.org/00a_abc_600x450.jpg", "https://images.craigslist.org/00b_def_600x450.jpg"),
         posted=datetime(2026, 9, 28, 14, 3, tzinfo=UTC),
         location="Irvine",
     )

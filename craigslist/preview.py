@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from craigslist.listings import Fetch, HttpFetcher, Listing, image_url, listing_attributes
+from craigslist.listings import Fetch, HttpFetcher, Listing, listing_attributes
 from craigslist.search import Search, SearchResult
 
 LOADING_TEXT = "Loading details from the listing..."
@@ -37,7 +37,7 @@ def preview_content(listing: Listing) -> PreviewContent:
         owner=str(listing.owner_type).capitalize(),
         posted=posted_text(listing.posted),
         location=listing.location or None,
-        image=image_url(listing.image_codes[0]) if listing.image_codes else None,
+        image=listing.images[0] if listing.images else None,
         url=listing.url,
     )
 
