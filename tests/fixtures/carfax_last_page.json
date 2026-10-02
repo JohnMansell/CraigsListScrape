@@ -1,0 +1,465 @@
+{
+ "totalListingCount": 29,
+ "page": 2,
+ "pageSize": 20,
+ "totalPageCount": 2,
+ "listings": [
+  {
+   "id": "JHMGE8H3XCC006628B8XKCGR00120260922",
+   "vin": "JHMGE8H3XCC006628",
+   "year": 2012,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "Unspecified",
+   "mileage": 168661,
+   "currentPrice": 8339,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-8416668514210374614/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Honda of Serramonte",
+    "city": "Colma",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-22",
+   "accidentHistory": {
+    "text": "Damage Reported",
+    "icon": "accident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_accident.gif",
+    "accidentSummary": [
+     "Minor to Moderate Damage"
+    ],
+    "iconName": "alertDiamondColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 8169,
+     "date": "09/25/2026",
+     "difference": 260
+    },
+    {
+     "listPrice": 7909,
+     "date": "09/25/2026",
+     "difference": -90
+    },
+    {
+     "listPrice": 7999,
+     "date": "09/22/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGE8H3XCC006628"
+  },
+  {
+   "id": "3HGGK5H88JM713129CBAJILBSA120260907",
+   "vin": "3HGGK5H88JM713129",
+   "year": 2018,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "EX",
+   "mileage": 64186,
+   "currentPrice": 18546,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/2868711150796707347/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/2868711150796707347/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "AutoNation Toyota Hayward",
+    "city": "Hayward",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-07",
+   "oneOwner": true,
+   "accidentHistory": {
+    "text": "Minor Damage",
+    "icon": "information",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_information.gif",
+    "accidentSummary": [
+     "Other damage reported"
+    ],
+    "iconName": "infoCircleColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 18424,
+     "date": "09/24/2026",
+     "difference": -281
+    },
+    {
+     "listPrice": 18705,
+     "date": "09/09/2026",
+     "difference": 890
+    },
+    {
+     "listPrice": 17815,
+     "date": "09/07/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/3HGGK5H88JM713129"
+  },
+  {
+   "id": "3HGGK5H96LM730622V7YIVYDTJH20260927",
+   "vin": "3HGGK5H96LM730622",
+   "year": 2020,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "EXL",
+   "mileage": 70791,
+   "currentPrice": 21973,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/4513830467505516221/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/4513830467505516221/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Honda San Carlos",
+    "city": "San Carlos",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-27",
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 21888,
+     "date": "09/27/2026",
+     "difference": 21888
+    },
+    {
+     "date": "09/27/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/3HGGK5H96LM730622"
+  },
+  {
+   "id": "JHMGK5H58HS0153171O87DPMDE220260528",
+   "vin": "JHMGK5H58HS015317",
+   "year": 2017,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "LX",
+   "mileage": 58511,
+   "currentPrice": 17127,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-1374812373188654309/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Autodeals",
+    "city": "Hayward",
+    "state": "CA"
+   },
+   "firstSeen": "2026-05-28",
+   "accidentHistory": {
+    "text": "Minor Damage",
+    "icon": "information",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_information.gif",
+    "accidentSummary": [
+     "Other damage reported"
+    ],
+    "iconName": "infoCircleColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 16999,
+     "date": "07/28/2026",
+     "difference": -1000
+    },
+    {
+     "listPrice": 17999,
+     "date": "05/28/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGK5H58HS015317"
+  },
+  {
+   "id": "JHMGE8H36DC0555192U5DRMD00120261002",
+   "vin": "JHMGE8H36DC055519",
+   "year": 2013,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "Unspecified",
+   "mileage": 87923,
+   "currentPrice": 11071,
+   "dealer": {
+    "name": "Toyota Marin",
+    "city": "San Rafael",
+    "state": "CA"
+   },
+   "firstSeen": "2026-10-02",
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 10991,
+     "date": "10/02/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGE8H36DC055519"
+  },
+  {
+   "id": "JHMGK5H93HS0133021O87DPMDE220260910",
+   "vin": "JHMGK5H93HS013302",
+   "year": 2017,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "EXL",
+   "mileage": 37350,
+   "currentPrice": 0,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-4987585312907949647/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Autodeals",
+    "city": "Hayward",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-10",
+   "accidentHistory": {
+    "text": "Accident/Minor Damage",
+    "icon": "orangeCar",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_orangeCar.gif",
+    "accidentSummary": [
+     "Accident Reported: Minor Damage"
+    ],
+    "iconName": "carSearchColor"
+   },
+   "priceHistory": [
+    {
+     "date": "09/10/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGK5H93HS013302"
+  },
+  {
+   "id": "JHMGE8H58CC002255DSCVFYMXHP20260730",
+   "vin": "JHMGE8H58CC002255",
+   "year": 2012,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "Sport",
+   "mileage": 131483,
+   "currentPrice": 7977,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-3777976746887566146/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Hybrid Auto Sales - DBA Elite Motors",
+    "city": "Hayward",
+    "state": "CA"
+   },
+   "firstSeen": "2026-07-30",
+   "accidentHistory": {
+    "text": "Minor Damage",
+    "icon": "information",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_information.gif",
+    "accidentSummary": [
+     "Other damage reported"
+    ],
+    "iconName": "infoCircleColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 7977,
+     "date": "08/07/2026",
+     "difference": -20
+    },
+    {
+     "listPrice": 7997,
+     "date": "07/30/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGE8H58CC002255"
+  },
+  {
+   "id": "JHMGE8H5XBC001378EERDUGA00120260424",
+   "vin": "JHMGE8H5XBC001378",
+   "year": 2011,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "Sport",
+   "mileage": 106975,
+   "currentPrice": 0,
+   "dealer": {
+    "name": "Wholesale Motors",
+    "city": "El Cerrito",
+    "state": "CA"
+   },
+   "firstSeen": "2026-04-24",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "date": "04/24/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGE8H5XBC001378"
+  },
+  {
+   "id": "JHMGE8H31BS012077DSCVFYMXHP20261001",
+   "vin": "JHMGE8H31BS012077",
+   "year": 2011,
+   "make": "Honda",
+   "model": "Fit",
+   "trim": "Unspecified",
+   "mileage": 86982,
+   "currentPrice": 9997,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-1648794207970812872/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Hybrid Auto Sales - DBA Elite Motors",
+    "city": "Hayward",
+    "state": "CA"
+   },
+   "firstSeen": "2026-10-01",
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 9997,
+     "date": "10/01/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/JHMGE8H31BS012077"
+  }
+ ]
+}

@@ -1,0 +1,1418 @@
+{
+ "totalListingCount": 443,
+ "page": 1,
+ "pageSize": 20,
+ "totalPageCount": 23,
+ "listings": [
+  {
+   "id": "19XFL2H85SE026451MTNZY6EJL620260805",
+   "vin": "19XFL2H85SE026451",
+   "year": 2025,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-731294189192471677/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-731294189192471677/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Honda of Vallejo",
+    "city": "Vallejo",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-05",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 25669,
+     "date": "10/02/2026",
+     "difference": -197
+    },
+    {
+     "listPrice": 25866,
+     "date": "10/01/2026",
+     "difference": -10
+    },
+    {
+     "listPrice": 25876,
+     "date": "09/30/2026",
+     "difference": -10
+    },
+    {
+     "listPrice": 25886,
+     "date": "09/29/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 25986,
+     "date": "09/25/2026",
+     "difference": -213
+    },
+    {
+     "listPrice": 26199,
+     "date": "09/18/2026",
+     "difference": -200
+    },
+    {
+     "listPrice": 26399,
+     "date": "09/12/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 26499,
+     "date": "09/05/2026",
+     "difference": -499
+    },
+    {
+     "listPrice": 26998,
+     "date": "08/05/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/19XFL2H85SE026451"
+  },
+  {
+   "id": "2HGFE2F54TH588934MTNZY6EJL620260815",
+   "vin": "2HGFE2F54TH588934",
+   "year": 2026,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 5317,
+   "currentPrice": 27393,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-2127013056069301135/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Honda of Vallejo",
+    "city": "Vallejo",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-15",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 27271,
+     "date": "10/02/2026",
+     "difference": -200
+    },
+    {
+     "listPrice": 27471,
+     "date": "10/01/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 27571,
+     "date": "09/30/2026",
+     "difference": -20
+    },
+    {
+     "listPrice": 27591,
+     "date": "09/29/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 27691,
+     "date": "09/25/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 27991,
+     "date": "09/18/2026",
+     "difference": -257
+    },
+    {
+     "listPrice": 28248,
+     "date": "08/15/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F54TH588934"
+  },
+  {
+   "id": "2HGFE2F24PH538353GNRO0EBV9J20260910",
+   "vin": "2HGFE2F24PH538353",
+   "year": 2023,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "LX",
+   "mileage": 73501,
+   "currentPrice": 21160,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/6084864729176643587/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/6084864729176643587/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Vallejo Hyundai",
+    "city": "Vallejo",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-10",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 21075,
+     "date": "09/30/2026",
+     "difference": -200
+    },
+    {
+     "listPrice": 21275,
+     "date": "09/29/2026",
+     "difference": 85
+    },
+    {
+     "listPrice": 21190,
+     "date": "09/25/2026",
+     "difference": -500
+    },
+    {
+     "listPrice": 21690,
+     "date": "09/18/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 21990,
+     "date": "09/10/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F24PH538353"
+  },
+  {
+   "id": "2HGFE2F57PH551365XYSNFFMN4B20261002",
+   "vin": "2HGFE2F57PH551365",
+   "year": 2023,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 139273,
+   "currentPrice": 17990,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/73974235405451320/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/73974235405451320/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "KY Motors Collection LLC",
+    "city": "Richmond",
+    "state": "CA"
+   },
+   "firstSeen": "2026-10-02",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 17990,
+     "date": "10/02/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F57PH551365"
+  },
+  {
+   "id": "2HGFE2F5XRH500736IGXMSG1V2120260929",
+   "vin": "2HGFE2F5XRH500736",
+   "year": 2024,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 17444,
+   "currentPrice": 25339,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-9087117897517892046/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Honda of Stevens Creek",
+    "city": "San Jose",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-29",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 25169,
+     "date": "09/29/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F5XRH500736"
+  },
+  {
+   "id": "19XFL1H84RE001772EIIHTT9OD120260813",
+   "vin": "19XFL1H84RE001772",
+   "year": 2024,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport Touring",
+   "mileage": 15245,
+   "currentPrice": 29176,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/7138464541898395021/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/7138464541898395021/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Walnut Creek Ford",
+    "city": "Walnut Creek",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-13",
+   "oneOwner": true,
+   "accidentHistory": {
+    "text": "Minor Damage",
+    "icon": "information",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_information.gif",
+    "accidentSummary": [
+     "Other damage reported"
+    ],
+    "iconName": "infoCircleColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 28996,
+     "date": "09/17/2026",
+     "difference": -454
+    },
+    {
+     "listPrice": 29450,
+     "date": "09/10/2026",
+     "difference": -410
+    },
+    {
+     "listPrice": 29860,
+     "date": "08/13/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/19XFL1H84RE001772"
+  },
+  {
+   "id": "2HGFC2F76HH502344KYJ3IXS01W20260806",
+   "vin": "2HGFC2F76HH502344",
+   "year": 2017,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EX",
+   "mileage": 174605,
+   "currentPrice": 10080,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-6335009871981272325/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Hanlees Fairfield Toyota",
+    "city": "Fairfield",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-06",
+   "accidentHistory": {
+    "text": "Accident/Minor Damage",
+    "icon": "orangeCar",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_orangeCar.gif",
+    "accidentSummary": [
+     "Accident Reported: Minor Damage"
+    ],
+    "iconName": "carSearchColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 10080,
+     "date": "09/27/2026",
+     "difference": -993
+    },
+    {
+     "listPrice": 11073,
+     "date": "09/19/2026",
+     "difference": -500
+    },
+    {
+     "listPrice": 11573,
+     "date": "09/10/2026",
+     "difference": 900
+    },
+    {
+     "listPrice": 10673,
+     "date": "09/03/2026",
+     "difference": -400
+    },
+    {
+     "listPrice": 11073,
+     "date": "08/27/2026",
+     "difference": -912
+    },
+    {
+     "listPrice": 11985,
+     "date": "08/13/2026",
+     "difference": -95
+    },
+    {
+     "listPrice": 12080,
+     "date": "08/06/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFC2F76HH502344"
+  },
+  {
+   "id": "2HGFE2F5XRH539973NU09PRBK4120260823",
+   "vin": "2HGFE2F5XRH539973",
+   "year": 2024,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 32693,
+   "currentPrice": 24370,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/5648463307568790049/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/5648463307568790049/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "AutoNation Honda Fremont",
+    "city": "Fremont",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-23",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 24248,
+     "date": "10/01/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 24548,
+     "date": "09/24/2026",
+     "difference": -362
+    },
+    {
+     "listPrice": 24910,
+     "date": "09/15/2026",
+     "difference": -727
+    },
+    {
+     "listPrice": 25637,
+     "date": "09/02/2026",
+     "difference": 300
+    },
+    {
+     "listPrice": 25337,
+     "date": "08/29/2026",
+     "difference": -855
+    },
+    {
+     "listPrice": 26192,
+     "date": "08/26/2026",
+     "difference": -122
+    },
+    {
+     "listPrice": 26314,
+     "date": "08/25/2026",
+     "difference": 916
+    },
+    {
+     "listPrice": 25398,
+     "date": "08/23/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F5XRH539973"
+  },
+  {
+   "id": "2HGFE2F53SH548536NU09PRBK4120260922",
+   "vin": "2HGFE2F53SH548536",
+   "year": 2025,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 16518,
+   "currentPrice": 26259,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-3173507355052044249/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "AutoNation Honda Fremont",
+    "city": "Fremont",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-22",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 26137,
+     "date": "09/26/2026",
+     "difference": -755
+    },
+    {
+     "listPrice": 26892,
+     "date": "09/23/2026",
+     "difference": -459
+    },
+    {
+     "listPrice": 27351,
+     "date": "09/22/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F53SH548536"
+  },
+  {
+   "id": "SHHFK7H71HU402779BOY8BQVIS420260928",
+   "vin": "SHHFK7H71HU402779",
+   "year": 2017,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EXL",
+   "mileage": 127281,
+   "currentPrice": 14883,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/5892587458281247625/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/5892587458281247625/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Acura of Fremont",
+    "city": "Fremont",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-28",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 14798,
+     "date": "09/28/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/SHHFK7H71HU402779"
+  },
+  {
+   "id": "2HGFC2F55JH550826V3GJ2FXGNJ20260911",
+   "vin": "2HGFC2F55JH550826",
+   "year": 2018,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "LX",
+   "mileage": 24120,
+   "currentPrice": 19591,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/2970620842479562355/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/2970620842479562355/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Ford Lincoln Fairfield",
+    "city": "Fairfield",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-11",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 19591,
+     "date": "09/12/2026",
+     "difference": 19591
+    },
+    {
+     "date": "09/11/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFC2F55JH550826"
+  },
+  {
+   "id": "2HGFE1E54PH47135510SK1I6SB120260805",
+   "vin": "2HGFE1E54PH471355",
+   "year": 2023,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Si",
+   "mileage": 87367,
+   "currentPrice": 24988,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-8004871236925936487/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Dublin Honda, Dublin Acura",
+    "city": "Dublin",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-05",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 24988,
+     "date": "09/24/2026",
+     "difference": -904
+    },
+    {
+     "listPrice": 25892,
+     "date": "09/10/2026",
+     "difference": -248
+    },
+    {
+     "listPrice": 26140,
+     "date": "09/05/2026",
+     "difference": -237
+    },
+    {
+     "listPrice": 26377,
+     "date": "08/25/2026",
+     "difference": -408
+    },
+    {
+     "listPrice": 26785,
+     "date": "08/18/2026",
+     "difference": -3103
+    },
+    {
+     "listPrice": 29888,
+     "date": "08/13/2026",
+     "difference": 4000
+    },
+    {
+     "listPrice": 25888,
+     "date": "08/05/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE1E54PH471355"
+  },
+  {
+   "id": "2HGFC2F60KH587471FENGQ8ZCUU20260909",
+   "vin": "2HGFC2F60KH587471",
+   "year": 2019,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "LX",
+   "mileage": 74414,
+   "currentPrice": 17980,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-3699299059276420139/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "THE CAR DAD",
+    "city": "Santa Rosa",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-09",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 17980,
+     "date": "09/09/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFC2F60KH587471"
+  },
+  {
+   "id": "19XFL1H73PE014324LDH8LO900120260828",
+   "vin": "19XFL1H73PE014324",
+   "year": 2023,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EXL",
+   "mileage": 113405,
+   "currentPrice": 18585,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/7999717584834460067/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/7999717584834460067/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Nohr's Auto Brokers",
+    "city": "Walnut Creek",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-28",
+   "oneOwner": true,
+   "accidentHistory": {
+    "text": "Damage Reported",
+    "icon": "magnifyingGlass",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_magnifyingGlass.gif",
+    "accidentSummary": [
+     "Damage Reported"
+    ],
+    "iconName": "searchColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 18500,
+     "date": "09/05/2026",
+     "difference": -450
+    },
+    {
+     "listPrice": 18950,
+     "date": "08/28/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/19XFL1H73PE014324"
+  },
+  {
+   "id": "2HGFE1F78RH301972Y8QA46XGD120260919",
+   "vin": "2HGFE1F78RH301972",
+   "year": 2024,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EX",
+   "mileage": 14504,
+   "currentPrice": 25668,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-4149210956791949033/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "Manly Honda of Santa Rosa",
+    "city": "Santa Rosa",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-19",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 25668,
+     "date": "09/19/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE1F78RH301972"
+  },
+  {
+   "id": "19XFL2G81NE010592IYSMXT7R1120260815",
+   "vin": "19XFL2G81NE010592",
+   "year": 2022,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 99834,
+   "currentPrice": 20025,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-5023960235488928667/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "AutoNation Acura Stevens Creek",
+    "city": "Santa Clara",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-15",
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 19903,
+     "date": "09/23/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 20203,
+     "date": "09/18/2026",
+     "difference": -340
+    },
+    {
+     "listPrice": 20543,
+     "date": "09/11/2026",
+     "difference": -1031
+    },
+    {
+     "listPrice": 21574,
+     "date": "09/05/2026",
+     "difference": -329
+    },
+    {
+     "listPrice": 21903,
+     "date": "08/29/2026",
+     "difference": -656
+    },
+    {
+     "listPrice": 22559,
+     "date": "08/19/2026",
+     "difference": -944
+    },
+    {
+     "listPrice": 23503,
+     "date": "08/17/2026",
+     "difference": 2127
+    },
+    {
+     "listPrice": 21376,
+     "date": "08/15/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/19XFL2G81NE010592"
+  },
+  {
+   "id": "SHHFK7H68KU407153JNXJKMZ00120260922",
+   "vin": "SHHFK7H68KU407153",
+   "year": 2019,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EX",
+   "mileage": 86744,
+   "currentPrice": 18988,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/7169869247678197596/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/7169869247678197596/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Victory Honda of San Bruno",
+    "city": "San Bruno",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-22",
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 18988,
+     "date": "09/24/2026",
+     "difference": 88
+    },
+    {
+     "listPrice": 18900,
+     "date": "09/22/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/SHHFK7H68KU407153"
+  },
+  {
+   "id": "2HGFE1F78RH339413MTNZY6EJL620260911",
+   "vin": "2HGFE1F78RH339413",
+   "year": 2024,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "EX",
+   "mileage": 20649,
+   "currentPrice": 26719,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/4612341076072051024/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/4612341076072051024/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "Honda of Vallejo",
+    "city": "Vallejo",
+    "state": "CA"
+   },
+   "firstSeen": "2026-09-11",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 26597,
+     "date": "10/02/2026",
+     "difference": -200
+    },
+    {
+     "listPrice": 26797,
+     "date": "09/25/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 26897,
+     "date": "09/18/2026",
+     "difference": -50
+    },
+    {
+     "listPrice": 26947,
+     "date": "09/11/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE1F78RH339413"
+  },
+  {
+   "id": "19XFL2H82SE010952LXNCVBWYVS20260811",
+   "vin": "19XFL2H82SE010952",
+   "year": 2025,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 7925,
+   "currentPrice": 27184,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-8637054869596006867/1/120x90"
+    }
+   },
+   "dealer": {
+    "name": "San Francisco Honda Acura",
+    "city": "San Francisco",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-11",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 27012,
+     "date": "09/12/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 27112,
+     "date": "09/12/2026",
+     "difference": -100
+    },
+    {
+     "listPrice": 27212,
+     "date": "09/09/2026",
+     "difference": 262
+    },
+    {
+     "listPrice": 26950,
+     "date": "08/26/2026",
+     "difference": -47
+    },
+    {
+     "listPrice": 26997,
+     "date": "08/25/2026",
+     "difference": -203
+    },
+    {
+     "listPrice": 27200,
+     "date": "08/21/2026",
+     "difference": -12
+    },
+    {
+     "listPrice": 27212,
+     "date": "08/13/2026",
+     "difference": 27212
+    },
+    {
+     "date": "08/11/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/19XFL2H82SE010952"
+  },
+  {
+   "id": "2HGFE2F58SH570242SS1EEC17WQ20260827",
+   "vin": "2HGFE2F58SH570242",
+   "year": 2025,
+   "make": "Honda",
+   "model": "Civic",
+   "trim": "Sport",
+   "mileage": 34100,
+   "currentPrice": 25167,
+   "images": {
+    "baseUrl": "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/",
+    "large": [
+     "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/640x480"
+    ],
+    "medium": [
+     "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/344x258"
+    ],
+    "small": [
+     "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/120x90"
+    ],
+    "firstPhoto": {
+     "large": "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/640x480",
+     "medium": "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/344x258",
+     "small": "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/120x90",
+     "xLarge": "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/1024x768"
+    },
+    "xlarge": [
+     "https://carfax-img.vast.com/carfax/v2/-6667918589813266617/1/1024x768"
+    ]
+   },
+   "dealer": {
+    "name": "El Cerrito Honda",
+    "city": "El Cerrito",
+    "state": "CA"
+   },
+   "firstSeen": "2026-08-27",
+   "oneOwner": true,
+   "noAccidents": true,
+   "accidentHistory": {
+    "text": "No Accident or Damage Reported",
+    "icon": "noAccident",
+    "iconUrl": "https://media.carfax.com/img/vhr/ico_noAccident.gif",
+    "accidentSummary": [
+     "No accident/damage reported to CARFAX"
+    ],
+    "iconName": "checkmarkSquareColor"
+   },
+   "priceHistory": [
+    {
+     "listPrice": 24995,
+     "date": "10/02/2026",
+     "difference": -400
+    },
+    {
+     "listPrice": 25395,
+     "date": "09/26/2026",
+     "difference": -37
+    },
+    {
+     "listPrice": 25432,
+     "date": "09/25/2026",
+     "difference": 37
+    },
+    {
+     "listPrice": 25395,
+     "date": "09/22/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 25695,
+     "date": "09/15/2026",
+     "difference": -300
+    },
+    {
+     "listPrice": 25995,
+     "date": "09/08/2026",
+     "difference": 100
+    },
+    {
+     "listPrice": 25895,
+     "date": "09/03/2026",
+     "difference": -1100
+    },
+    {
+     "listPrice": 26995,
+     "date": "08/27/2026"
+    }
+   ],
+   "vdpUrl": "https://www.carfax.com/vehicle/2HGFE2F58SH570242"
+  }
+ ]
+}
