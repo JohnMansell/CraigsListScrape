@@ -62,6 +62,27 @@ def test_known_cities_map_to_their_expected_zip():
         assert city.zip == zip_code
 
 
+def test_carfax_model_matches_craigslists_name_for_most_models():
+    assert lookup.carfax_model("Honda", "Civic") == "Civic"
+
+
+def test_carfax_model_differs_for_a_name_carfax_spells_differently():
+    assert lookup.carfax_model("Ford", "F150") == "F-150"
+
+
+def test_carfax_model_is_none_for_a_model_carfax_does_not_carry():
+    assert lookup.carfax_model("Porsche", "718") is None
+
+
+def test_carfax_model_is_none_for_an_unknown_make_or_model():
+    assert lookup.carfax_model("no such make", "Civic") is None
+    assert lookup.carfax_model("Honda", "no such model") is None
+
+
+def test_carfax_model_lookup_ignores_case():
+    assert lookup.carfax_model("HONDA", "civic") == "Civic"
+
+
 def test_loader_does_not_use_pandas():
     tree = ast.parse(Path(lookup.__file__).read_text())
     imported = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
