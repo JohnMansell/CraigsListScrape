@@ -57,7 +57,7 @@ def test_a_full_page_is_parsed_into_dealer_listings(small_pages):
 
     results = search_carfax(Search(SAN_FRANCISCO, "Honda", "Fit"), fetch)
 
-    assert len(results.listings) == 9  # the saved last page is short, so paging stops there
+    assert len(results.listings) == 7  # the saved last page is short, so paging stops there; 2 have no price
     assert all(listing.owner_type == OwnerType.DEALER for listing in results.listings)
     assert all(listing.source == Source.CARFAX for listing in results.listings)
     assert all(listing.id.startswith("carfax:") for listing in results.listings)
@@ -89,6 +89,15 @@ def test_a_result_with_no_price_is_skipped_and_logged(log_messages):
     assert any("no price" in message for message in log_messages)
 
 
+def test_a_result_with_a_zero_price_is_skipped_and_logged(log_messages):
+    # Seen live: a $0 currentPrice breaks the exponential-decay Price curve fit.
+    item = dict(fixture("carfax_page_1.json")["listings"][1])
+    item["currentPrice"] = 0
+
+    assert carfax._parse_item(item) is None
+    assert any("no price" in message for message in log_messages)
+
+
 def test_a_result_with_no_mileage_gets_none():
     item = dict(fixture("carfax_page_1.json")["listings"][1])
     del item["mileage"]
@@ -115,7 +124,7 @@ def test_search_pages_until_a_short_page(small_pages):
     assert len(fetch.urls) == 3
     expected = len(fixture("carfax_page_1.json")["listings"]) - 1  # one has no price
     expected += len(fixture("carfax_page_2.json")["listings"])
-    expected += len(fixture("carfax_last_page.json")["listings"])
+    expected += len(fixture("carfax_last_page.json")["listings"]) - 2  # two have no price
     assert len(results.listings) == expected
     assert results.reported_total == fixture("carfax_page_1.json")["totalListingCount"]
 
@@ -140,7 +149,7 @@ def test_batches_are_reported_in_request_order(small_pages):
 
     assert len(batches) == 2
     assert len(batches[0]) == FIXTURE_PAGE_SIZE - 1  # one listing has no price
-    assert len(batches[1]) == 9
+    assert len(batches[1]) == 7  # 2 of the 9 have no price
 
 
 # Price bands
