@@ -17,7 +17,7 @@ Who is selling a Listing: a private owner or a dealer.
 _Avoid_: Seller type, purveyor
 
 **Source**:
-The website a Listing was found on: Craigslist or Carfax. A Search can include either or both. Carfax has dealers only, and the same car can appear once per Source.
+The website a Listing was found on: Craigslist, Carfax or CarMax. A Search can include any of them. Carfax and CarMax have dealers only (CarMax sells its own cars), and the same car can appear once per Source.
 _Avoid_: Listing source, scraper, crawler
 
 **Listing details**:
