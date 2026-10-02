@@ -15,6 +15,13 @@ is present. The tests shrink the page sizes to PAGE_SIZE to exercise paging.
 - owner_batch_20.json: a short batch page, which ends paging.
 - dealer_full.json: step 1, Orange County honda civic dealer. The API reports a
   total below the number of results it returns.
+- carfax_page_1.json: Honda Civic, zip 94103, radius 50 - first page, full. One
+  listing has its price and mileage removed, to give the tests a listing with
+  neither (not seen missing live).
+- carfax_page_2.json: the same search, page 2 - a later full page.
+- carfax_last_page.json: Honda Fit, same zip/radius - the last, short page.
+- carfax_empty.json: an unknown model - a search with no results (totalListingCount,
+  totalPageCount and listings all absent, not zero or empty).
 """
 import json
 import sys
@@ -25,7 +32,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from craigslist import listings  # noqa: E402
-from craigslist.listings import OwnerType, Search  # noqa: E402
+from craigslist.listings import HttpFetcher, OwnerType, Search  # noqa: E402
 from craigslist.lookup import City  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent
@@ -33,6 +40,16 @@ PAGE_SIZE = 20
 SHORT_PAGE_SIZE = 7
 PER_VARIANT = 2
 ORANGE_COUNTY = City("Orange County", "https://orangecounty.craigslist.org")
+
+CARFAX_API = "https://helix.carfax.com/search/v2/vehicles"
+CARFAX_ZIP = "94103"
+CARFAX_RADIUS = 50
+CARFAX_LISTING_FIELDS = (
+    "id", "vin", "year", "make", "model", "trim", "mileage", "currentPrice",
+    "images", "dealer", "firstSeen", "oneOwner", "noAccidents", "accidentHistory",
+    "priceHistory", "vdpUrl",
+)
+CARFAX_DEALER_FIELDS = ("name", "city", "state")
 
 Item = list[Any]
 
@@ -119,11 +136,54 @@ def refresh_dealer(fetch: listings.HttpFetcher) -> None:
     save("dealer_full.json", full)
 
 
+def carfax_url(make: str, model: str, page: int, rows: int = PAGE_SIZE) -> str:
+    params = {"zip": CARFAX_ZIP, "radius": CARFAX_RADIUS, "make": make, "model": model,
+              "vehicleCondition": "USED", "rows": rows, "page": page}
+    return f"{CARFAX_API}?{'&'.join(f'{key}={value}' for key, value in params.items())}"
+
+
+def trim_carfax_listing(item: dict[str, Any]) -> dict[str, Any]:
+    trimmed = {key: item[key] for key in CARFAX_LISTING_FIELDS if key in item}
+    trimmed["dealer"] = {key: trimmed["dealer"][key] for key in CARFAX_DEALER_FIELDS}
+    return trimmed
+
+
+def trim_carfax_response(response: dict[str, Any], count: int) -> dict[str, Any]:
+    listings_ = [trim_carfax_listing(item) for item in response["listings"][:count]]
+    return {key: response[key] for key in ("totalListingCount", "page", "pageSize", "totalPageCount")} | {
+        "listings": listings_
+    }
+
+
+def refresh_carfax(fetch: HttpFetcher) -> None:
+    page_1 = json.loads(fetch(carfax_url("Honda", "Civic", page=1)))
+    if len(page_1["listings"]) < PAGE_SIZE:
+        sys.exit(f"carfax civic page 1 returned {len(page_1['listings'])} results, need {PAGE_SIZE} to page")
+    trimmed_1 = trim_carfax_response(page_1, PAGE_SIZE)
+    trimmed_1["listings"][0].pop("currentPrice", None)
+    trimmed_1["listings"][0].pop("mileage", None)
+    save("carfax_page_1.json", trimmed_1)
+
+    page_2 = json.loads(fetch(carfax_url("Honda", "Civic", page=2)))
+    save("carfax_page_2.json", trim_carfax_response(page_2, PAGE_SIZE))
+
+    last_page = json.loads(fetch(carfax_url("Honda", "Fit", page=2)))
+    if len(last_page["listings"]) >= PAGE_SIZE:
+        sys.exit("carfax fit page 2 is no longer short; pick a rarer model to refresh the last-page fixture")
+    save("carfax_last_page.json", trim_carfax_response(last_page, len(last_page["listings"])))
+
+    empty = json.loads(fetch(carfax_url("Honda", "Zzznotreal", page=1)))
+    if "listings" in empty or "totalListingCount" in empty:
+        sys.exit("carfax empty-search response now has results; pick another nonsense model")
+    save("carfax_empty.json", {key: empty.get(key) for key in ("page", "pageSize", "totalPageCount")})
+
+
 def main() -> None:
     fetch = listings.HttpFetcher()
     try:
         refresh_owner(fetch)
         refresh_dealer(fetch)
+        refresh_carfax(fetch)
     finally:
         fetch.close()
 

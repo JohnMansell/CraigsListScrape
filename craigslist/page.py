@@ -28,7 +28,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
-from craigslist.listings import Listing, OwnerType
+from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
     detail_lines,
@@ -48,7 +48,7 @@ TITLE = "Craigslist car prices"
 STORAGE_DIR = Path(".nicegui")
 """NiceGUI's per-browser storage files, and the generated secret that signs the browser cookie."""
 SEARCH_KEYS = ("state", "city", "make", "model")
-FLAG_KEYS = {"owner": OwnerType.OWNER, "dealer": OwnerType.DEALER}
+FLAG_KEYS = ("owner", "dealer", "carfax")
 FALSE_WORDS = {"0", "false", "no", "off"}
 
 
@@ -62,6 +62,7 @@ class SearchForm:
     model: str | None = None
     owner: bool = True
     dealer: bool = True
+    carfax: bool = True
 
     @classmethod
     def from_query(cls, params: Mapping[str, str]) -> "SearchForm":
@@ -81,12 +82,18 @@ class SearchForm:
             form.model = _known(params.get("model"), form.model_options())
         form.owner = params.get("owner", "1").strip().casefold() not in FALSE_WORDS
         form.dealer = params.get("dealer", "1").strip().casefold() not in FALSE_WORDS
+        form.carfax = params.get("carfax", "1").strip().casefold() not in FALSE_WORDS
         return form
 
     def to_query(self) -> dict[str, str]:
-        """The chosen values and both checkboxes as URL query parameters, the inverse of `from_query`."""
+        """The chosen values and every checkbox as URL query parameters, the inverse of `from_query`."""
         chosen = {key: value for key in SEARCH_KEYS if (value := getattr(self, key))}
-        return {**chosen, "owner": "1" if self.owner else "0", "dealer": "1" if self.dealer else "0"}
+        return {
+            **chosen,
+            "owner": "1" if self.owner else "0",
+            "dealer": "1" if self.dealer else "0",
+            "carfax": "1" if self.carfax else "0",
+        }
 
     def choose_state(self, state: str | None) -> None:
         self.state = state
@@ -106,8 +113,8 @@ class SearchForm:
         """Why Search is disabled, or None when it can run."""
         if not (self.state and self.city and self.make and self.model):
             return "Pick a state, city, make, and model"
-        if not (self.owner or self.dealer):
-            return "Pick owner, dealer, or both"
+        if not (self.owner or self.dealer or self.carfax):
+            return "Pick owner, dealer, or carfax"
         return None
 
     def search(self) -> Search:
@@ -117,7 +124,7 @@ class SearchForm:
             for owner_type, checked in ((OwnerType.OWNER, self.owner), (OwnerType.DEALER, self.dealer))
             if checked
         )
-        return Search(self.state, self.city, self.make, self.model, owner_types)
+        return Search(self.state, self.city, self.make, self.model, owner_types, self.carfax)
 
 
 def has_search_params(params: Mapping[str, str]) -> bool:
@@ -222,6 +229,12 @@ def search_page(request: Request) -> None:
         refresh_search_button()
         redraw()
 
+    def carfax_changed(checked: bool) -> None:
+        form.carfax = checked
+        remember()
+        refresh_search_button()
+        redraw()
+
     def redraw() -> None:
         """Apply the checkboxes to the finished Search at once, without fetching."""
         if current is not None and not running:
@@ -261,11 +274,11 @@ def search_page(request: Request) -> None:
         ui.label(content.title).classes("font-bold")
         ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
-        for line in (content.posted, content.location):
+        for line in (content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
-        ui.button("Open on Craigslist").props(f'href="{content.url}" target="_blank" rel="noopener" flat')
-        if listing is pinned:
+        ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+        if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
                 ui.label(lines).classes("text-sm opacity-70")
@@ -328,7 +341,7 @@ def search_page(request: Request) -> None:
         """Move the ring to the Pinned Listing without redrawing the points."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.post_id if pinned else None))
+            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None))
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -361,7 +374,8 @@ def search_page(request: Request) -> None:
         reset_button.set_visibility(False)
         curve_note.set_visibility(False)
         empty_label.set_visibility(False)
-        status.set_text(f"Searching Craigslist for {search.make} {search.model} in {search.city}...")
+        sources = [name for name, chosen in (("Craigslist", search.owner_types), ("Carfax", search.carfax)) if chosen]
+        status.set_text(f"Searching {' and '.join(sources)} for {search.make} {search.model} in {search.city}...")
         timer.activate()
         try:
             result = await run.io_bound(run_live_search, search, None, arrived.put, stop.is_set)
@@ -389,15 +403,17 @@ def search_page(request: Request) -> None:
         arm_drag_zoom()
 
     def show(fetched: Search, result: SearchResult, final: bool) -> None:
-        """Draw `result`, limited to the fetched owner types that are checked now."""
+        """Draw `result`, limited to the fetched Owner types and Sources checked now."""
         nonlocal shown_search, shown_result
         wanted = {OwnerType.OWNER: form.owner, OwnerType.DEALER: form.dealer}
-        search = replace(fetched, owner_types=tuple(t for t in fetched.owner_types if wanted[t]))
+        search = replace(
+            fetched, owner_types=tuple(t for t in fetched.owner_types if wanted[t]), carfax=fetched.carfax and form.carfax
+        )
         shown_search, shown_result = search, result
-        missing = unfetched_message(fetched, [t for t, checked in wanted.items() if checked])
+        missing = unfetched_message(fetched, [t for t, checked in wanted.items() if checked], wanted_carfax=form.carfax)
         message = empty_message(search, result) if final else None
-        if not search.owner_types:
-            message = missing or "Pick owner, dealer, or both"
+        if not search.owner_types and not search.carfax:
+            message = missing or "Pick owner, dealer, or carfax"
             missing = None
         chart.set_visibility(message is None and bool(result.listings))
         empty_label.set_visibility(message is not None)
@@ -405,7 +421,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.post_id if pinned else None))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
@@ -422,7 +438,7 @@ def search_page(request: Request) -> None:
         text = failure_banner(result)
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
-        if search.owner_types:
+        if search.owner_types or search.carfax:
             status.set_text(status_text(search, result) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
@@ -434,6 +450,7 @@ def search_page(request: Request) -> None:
             model_select = ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value)).classes("w-44")
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
+            ui.checkbox("Carfax", value=form.carfax, on_change=lambda e: carfax_changed(e.value))
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")

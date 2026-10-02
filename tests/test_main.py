@@ -65,6 +65,34 @@ def test_listings_command_prints_each_listing_count_and_curve_coefficients(tmp_p
     assert " c=" in lines[-1]
 
 
+def test_carfax_command_prints_each_listing_and_the_total(tmp_path, monkeypatch, capsys):
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+    page = (REPO_ROOT / "tests" / "fixtures" / "carfax_last_page.json").read_text()
+
+    def fetch(url: str) -> str:
+        return page
+
+    main(["carfax", "--state", "CA", "--city", "sf bay area", "--make", "honda", "--model", "fit"], fetch)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 8  # 7 Listings plus the total line
+    assert lines[-1].startswith("carfax: 7 Listings, API reported total")
+
+
+def test_carfax_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch, capsys):
+    from craigslist.__main__ import main
+
+    monkeypatch.setenv("CRAIGSLIST_LOGDIR", str(tmp_path))
+
+    with pytest.raises(SystemExit) as error:
+        main(["carfax", "--state", "XX", "--city", "Orange County", "--make", "honda", "--model", "civic"], lambda url: "")
+
+    assert error.value.code == 2
+    assert "unknown state 'XX'" in capsys.readouterr().err
+
+
 def test_listings_command_reports_an_invalid_lookup_value(tmp_path, monkeypatch, capsys):
     from craigslist.__main__ import main
 

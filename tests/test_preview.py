@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from craigslist.listings import Listing, OwnerType
+from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     EMPTY_TEXT,
     LOADING_TEXT,
@@ -12,19 +12,35 @@ from craigslist.preview import (
 )
 from craigslist.search import Search, SearchResult
 
-SEARCH = Search("CA", "Orange County", "Honda", "Civic")
+SEARCH = Search("CA", "Orange County", "Honda", "Civic", carfax=False)
 
 
 def listing(
     post_id: int = 1,
     owner_type: OwnerType = OwnerType.OWNER,
     mileage: int | None = 50_000,
-    image_codes: tuple[str, ...] = (),
+    images: tuple[str, ...] = (),
     posted: datetime | None = None,
     location: str | None = None,
 ) -> Listing:
     return Listing(
-        post_id, f"car {post_id}", 12_500, mileage, f"https://example.org/{post_id}", image_codes, owner_type, posted, location
+        str(post_id), Source.CRAIGSLIST, f"car {post_id}", 12_500, mileage, f"https://example.org/{post_id}",
+        images, owner_type, posted, location,
+    )
+
+
+def carfax_listing(
+    post_id: int = 1,
+    mileage: int | None = 50_000,
+    dealer: str | None = "Honda of Vallejo",
+    one_owner: bool | None = True,
+    no_accidents: bool | None = True,
+    price_dropped: bool | None = True,
+) -> Listing:
+    return Listing(
+        f"carfax:{post_id}", Source.CARFAX, f"car {post_id}", 12_500, mileage,
+        f"https://www.carfax.com/vehicle/{post_id}", (), OwnerType.DEALER, None, "Vallejo, CA",
+        dealer, one_owner, no_accidents, price_dropped,
     )
 
 
@@ -34,7 +50,7 @@ DETAIL_PAGE = """<div class="postinginfo">post id: 123</div>
 
 def test_content_from_a_full_listing():
     full = listing(
-        image_codes=("00a_abc", "00b_def"),
+        images=("https://images.craigslist.org/00a_abc_600x450.jpg", "https://images.craigslist.org/00b_def_600x450.jpg"),
         posted=datetime(2026, 9, 28, 14, 3, tzinfo=UTC),
         location="Irvine",
     )
@@ -100,3 +116,61 @@ def test_load_details_gives_nothing_when_the_fetch_fails():
         raise OSError("blocked")
 
     assert load_details(listing(), failing_fetch) == {}
+
+
+# Carfax
+
+
+def test_content_from_a_carfax_listing_shows_its_extras():
+    content = preview_content(carfax_listing())
+
+    assert content.link_label == "Open on Carfax"
+    assert content.dealer == "Honda of Vallejo"
+    assert content.owners == "One owner"
+    assert content.accidents == "No accidents reported"
+    assert content.price_drop == "Price dropped"
+
+
+def test_content_from_a_craigslist_listing_has_no_carfax_extras():
+    content = preview_content(listing())
+
+    assert content.link_label == "Open on Craigslist"
+    assert content.dealer is None
+    assert content.owners is None
+    assert content.accidents is None
+    assert content.price_drop is None
+
+
+def test_content_describes_multiple_owners_and_a_reported_accident():
+    content = preview_content(carfax_listing(one_owner=False, no_accidents=False, price_dropped=False))
+
+    assert content.owners == "Previous owners"
+    assert content.accidents == "Accident reported"
+    assert content.price_drop is None
+
+
+def test_load_details_never_fetches_a_carfax_listing():
+    def fetch(url: str) -> str:
+        raise AssertionError("must not fetch a Carfax Listing: www.carfax.com is DataDome-blocked")
+
+    assert load_details(carfax_listing(), fetch) == {}
+
+
+def test_no_mileage_listings_includes_carfax_when_shown():
+    owner, found = listing(1, mileage=None), carfax_listing(2, mileage=None)
+    result = SearchResult([owner, found, listing(3)], {}, {})
+
+    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), carfax=True)
+    assert no_mileage_listings(shown, result) == [owner, found]
+
+    not_shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.OWNER,), carfax=False)
+    assert no_mileage_listings(not_shown, result) == [owner]
+
+
+def test_no_mileage_listings_excludes_a_carfax_dealer_from_the_craigslist_dealer_bucket():
+    # Both carry OwnerType.DEALER; only Source tells them apart.
+    found = carfax_listing(1, mileage=None)
+    result = SearchResult([found], {}, {})
+
+    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), carfax=False)
+    assert no_mileage_listings(shown, result) == []

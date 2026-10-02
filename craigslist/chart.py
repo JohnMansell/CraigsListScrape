@@ -7,11 +7,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from craigslist.curve import NotEnoughData, PriceCurve
-from craigslist.listings import Listing, OwnerType
+from craigslist.listings import Listing, OwnerType, Source
 from craigslist.search import Search, SearchResult
 
 OWNER_COLOR = "#2f7ed8"
 DEALER_COLOR = "#e8743b"
+CARFAX_COLOR = "#2ca02c"
 AXIS_COLOR = "#8a8a8a"
 """Mid grey, readable in light and dark mode."""
 
@@ -23,6 +24,9 @@ ARROW_SIZE = 14
 PIN_COLOR = "#d62728"
 PIN_SIZE = 24
 PIN_NAME = "Pinned listing"
+CARFAX_NAME = "Carfax"
+"""Its own series: a Carfax Listing always has OwnerType.DEALER, so it is told apart from
+a Craigslist Dealer Listing by Source, not by owner type."""
 
 COLORS = {OwnerType.OWNER: OWNER_COLOR, OwnerType.DEALER: DEALER_COLOR}
 NAMES = {OwnerType.OWNER: "Owner", OwnerType.DEALER: "Dealer"}
@@ -38,7 +42,7 @@ class ChartRange:
     max_price: float
 
 
-def chart_options(search: Search, result: SearchResult, pinned_id: int | None = None) -> dict[str, Any]:
+def chart_options(search: Search, result: SearchResult, pinned_id: str | None = None) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
     Listings without mileage are left off. The axes fit the points the curves kept, so a
@@ -51,10 +55,14 @@ def chart_options(search: Search, result: SearchResult, pinned_id: int | None = 
     series: list[dict[str, Any]] = []
     for owner_type in search.owner_types:
         series.append(_points(owner_type, result, view))
+    if search.carfax:
+        series.append(_carfax_points(result, view))
     for owner_type in search.owner_types:
         curve = result.curves.get(owner_type)
         if isinstance(curve, PriceCurve):
             series.append(_curve(owner_type, curve))
+    if search.carfax and isinstance(result.carfax_curve, PriceCurve):
+        series.append(_carfax_curve(result.carfax_curve))
     legend = [str(item["name"]) for item in series]
     series.append(_pin_ring(search, result, view, pinned_id))
     return {
@@ -75,14 +83,19 @@ def plotted_listings(search: Search, result: SearchResult) -> dict[str, list[Lis
 
     A chart event gives a series name and a data index; this maps them back to a Listing.
     """
-    return {
+    mapping = {
         NAMES[owner_type]: [
             listing
             for listing in result.listings
-            if listing.owner_type == owner_type and listing.mileage is not None
+            if listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type and listing.mileage is not None
         ]
         for owner_type in search.owner_types
     }
+    if search.carfax:
+        mapping[CARFAX_NAME] = [
+            listing for listing in result.listings if listing.source == Source.CARFAX and listing.mileage is not None
+        ]
+    return mapping
 
 
 def default_range(search: Search, result: SearchResult) -> ChartRange | None:
@@ -99,21 +112,33 @@ def default_range(search: Search, result: SearchResult) -> ChartRange | None:
             prices += [curve.min_price, curve.max_price]
             continue
         for listing in result.listings:
-            if listing.owner_type == owner_type and listing.mileage is not None:
+            if listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type and listing.mileage is not None:
                 miles.append(listing.mileage)
                 prices.append(listing.price)
+    if search.carfax:
+        if isinstance(result.carfax_curve, PriceCurve):
+            miles += [result.carfax_curve.min_miles, result.carfax_curve.max_miles]
+            prices += [result.carfax_curve.min_price, result.carfax_curve.max_price]
+        else:
+            for listing in result.listings:
+                if listing.source == Source.CARFAX and listing.mileage is not None:
+                    miles.append(listing.mileage)
+                    prices.append(listing.price)
     if not miles:
         return None
     return ChartRange(*_padded(miles), *_padded(prices))
 
 
 def curve_notes(search: Search, result: SearchResult) -> list[str]:
-    """One note for each searched owner type whose points were too few for a curve."""
-    return [
+    """One note for each searched owner type, and Carfax, whose points were too few for a curve."""
+    notes = [
         f"Too few {owner_type} listings for a curve"
         for owner_type in search.owner_types
         if isinstance(result.curves.get(owner_type), NotEnoughData)
     ]
+    if search.carfax and isinstance(result.carfax_curve, NotEnoughData):
+        notes.append("Too few Carfax listings for a curve")
+    return notes
 
 
 def empty_message(search: Search, result: SearchResult) -> str | None:
@@ -128,18 +153,24 @@ def empty_message(search: Search, result: SearchResult) -> str | None:
     return None
 
 
-def unfetched_message(fetched: Search, wanted: Collection[OwnerType]) -> str | None:
-    """"Search again to load dealer listings" when a wanted owner type was not fetched, else None."""
+def unfetched_message(fetched: Search, wanted: Collection[OwnerType], wanted_carfax: bool = False) -> str | None:
+    """"Search again to load dealer listings" when a wanted owner type, or Carfax, was
+    not fetched, else None."""
     missing = [NAMES[t].lower() for t in wanted if t not in fetched.owner_types]
+    if wanted_carfax and not fetched.carfax:
+        missing.append("carfax")
     return f"Search again to load {' and '.join(missing)} listings" if missing else None
 
 
 def status_text(search: Search, result: SearchResult) -> str:
-    counts = ", ".join(
-        f"{sum(listing.owner_type == owner_type for listing in result.listings)} {owner_type}"
+    parts = [
+        f"{sum(listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type for listing in result.listings)} "
+        f"{owner_type}"
         for owner_type in search.owner_types
-    )
-    text = f"{len(result.listings)} listings: {counts}"
+    ]
+    if search.carfax:
+        parts.append(f"{sum(listing.source == Source.CARFAX for listing in result.listings)} Carfax")
+    text = f"{len(result.listings)} listings: {', '.join(parts)}"
     return f"Cancelled. {text}" if result.cancelled else text
 
 
@@ -149,14 +180,17 @@ def progress_text(count: int) -> str:
 
 
 def failure_banner(result: SearchResult) -> str | None:
-    """The banner for a Search Craigslist failed partway through, else None."""
-    if result.error is None:
+    """The banner for a Search a Source failed partway through, else None. A Craigslist
+    failure does not hide Carfax's Listings, and the other way around."""
+    failures = []
+    if result.error is not None:
+        requests = "1 request" if result.requests == 1 else f"{result.requests} requests"
+        failures.append(f"Craigslist stopped answering after {requests}.")
+    if result.carfax_error is not None:
+        failures.append("Carfax stopped answering.")
+    if not failures:
         return None
-    requests = "1 request" if result.requests == 1 else f"{result.requests} requests"
-    return (
-        f"Craigslist stopped answering after {requests}. "
-        f"Showing {len(result.listings)} listings; there may be more."
-    )
+    return " ".join(failures) + f" Showing {len(result.listings)} listings; there may be more."
 
 
 def _padded(values: list[float]) -> tuple[float, float]:
@@ -203,17 +237,33 @@ def _points(owner_type: OwnerType, result: SearchResult, view: ChartRange | None
         "data": [
             (view and _edge_point(listing.mileage, listing.price, view)) or [listing.mileage, listing.price]
             for listing in result.listings
-            if listing.owner_type == owner_type and listing.mileage is not None
+            if listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type and listing.mileage is not None
         ],
     }
 
 
-def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pinned_id: int | None) -> dict[str, Any]:
+def _carfax_points(result: SearchResult, view: ChartRange | None) -> dict[str, Any]:
+    """Hollow like a Dealer series, its own colour: Carfax's own series, told apart from
+    Craigslist's by Source rather than owner type."""
+    return {
+        "name": CARFAX_NAME,
+        "type": "scatter",
+        "symbolSize": POINT_SIZE,
+        "itemStyle": {"color": "transparent", "borderColor": CARFAX_COLOR, "borderWidth": 1.5},
+        "data": [
+            (view and _edge_point(listing.mileage, listing.price, view)) or [listing.mileage, listing.price]
+            for listing in result.listings
+            if listing.source == Source.CARFAX and listing.mileage is not None
+        ],
+    }
+
+
+def _pin_ring(search: Search, result: SearchResult, view: ChartRange | None, pinned_id: str | None) -> dict[str, Any]:
     """A hollow ring around the Pinned Listing's point, or no data when it is not plotted."""
     data: list[list[float]] = []
     for listings in plotted_listings(search, result).values():
         for listing in listings:
-            if listing.post_id == pinned_id and listing.mileage is not None:
+            if listing.id == pinned_id and listing.mileage is not None:
                 edge = view and _edge_point(listing.mileage, listing.price, view)
                 data.append(edge["value"] if edge else [listing.mileage, listing.price])
     return {
@@ -236,6 +286,17 @@ def _curve(owner_type: OwnerType, curve: PriceCurve) -> dict[str, Any]:
         "showSymbol": False,
         "itemStyle": {"color": color},
         "lineStyle": {"color": color, "width": 2},
+        "data": [[point.miles, point.price] for point in curve.points],
+    }
+
+
+def _carfax_curve(curve: PriceCurve) -> dict[str, Any]:
+    return {
+        "name": f"{CARFAX_NAME} curve",
+        "type": "line",
+        "showSymbol": False,
+        "itemStyle": {"color": CARFAX_COLOR},
+        "lineStyle": {"color": CARFAX_COLOR, "width": 2},
         "data": [[point.miles, point.price] for point in curve.points],
     }
 
