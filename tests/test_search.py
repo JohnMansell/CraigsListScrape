@@ -152,7 +152,7 @@ def dual_fetch(craigslist_response: str, carfax_response: str):
     return fetch
 
 
-BOTH_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.DEALER,))
+BOTH_SEARCH = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.DEALER,), sources=(Source.CARFAX,))
 
 
 def test_run_search_includes_carfax_listings_alongside_craigslist():
@@ -230,3 +230,51 @@ def test_carfax_alone_needs_no_owner_type():
 
     assert len(result.listings) == 7
     assert result.curves == {}
+
+
+# CarMax
+
+CARMAX_ONLY = Search("CA", "Orange County", "honda", "civic", owner_types=(), sources=(Source.CARMAX,))
+ALL_SOURCES = Search("CA", "Orange County", "honda", "civic", owner_types=(OwnerType.DEALER,), sources=(Source.CARFAX, Source.CARMAX))
+
+
+def triple_fetch(carmax_response: str | None):
+    """Craigslist and Carfax get their fixtures; CarMax gets `carmax_response`, or fails when None."""
+
+    def fetch(url: str) -> str:
+        if "carmax.com" in url:
+            if carmax_response is None:
+                raise ListingSourceError("HTTP 500")
+            return carmax_response
+        return fixture("carfax_last_page.json") if "carfax.com" in url else fixture("dealer_full.json")
+
+    return fetch
+
+
+def test_carmax_is_one_of_the_default_sources():
+    assert Source.CARMAX in Search("CA", "Orange County", "honda", "civic").sources
+
+
+def test_carmax_alone_needs_no_owner_type_and_gets_its_own_curve():
+    result = run_search(CARMAX_ONLY, lambda url: fixture("carmax_last_page.json"))
+
+    assert result.listings and all(listing.source == Source.CARMAX for listing in result.listings)
+    assert all(listing.owner_type == OwnerType.DEALER for listing in result.listings)
+    assert result.curves == {}
+    assert isinstance(result.source_curves[Source.CARMAX], PriceCurve)
+    assert result.source_reported_totals[Source.CARMAX] > 0
+
+
+def test_carmax_listings_sit_alongside_craigslist_and_carfax():
+    result = run_search(ALL_SOURCES, triple_fetch(fixture("carmax_last_page.json")))
+
+    assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX, Source.CARMAX}
+    assert set(result.source_curves) == {Source.CARFAX, Source.CARMAX}
+
+
+def test_a_carmax_failure_keeps_the_other_sources_listings():
+    result = run_search(ALL_SOURCES, triple_fetch(None))
+
+    assert set(result.source_errors) == {Source.CARMAX}
+    assert result.error is None
+    assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX}
