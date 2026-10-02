@@ -46,7 +46,7 @@ def print_listings(search: Search, fetch: Fetch | None) -> None:
     results = run_live_search(search, fetch)
     for listing in results.listings:
         mileage = "?" if listing.mileage is None else f"{listing.mileage:,}"
-        print(f"{listing.owner_type:<6} {listing.post_id} ${listing.price:>7,} {mileage:>9} mi  {listing.title}")
+        print(f"{listing.owner_type:<6} {listing.id} ${listing.price:>7,} {mileage:>9} mi  {listing.title}")
     for owner_type, total in results.reported_totals.items():
         count = sum(listing.owner_type == owner_type for listing in results.listings)
         print(_summary(owner_type, count, total, results))

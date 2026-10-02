@@ -12,12 +12,14 @@ from craigslist.chart import (
     unfetched_message,
 )
 from craigslist.curve import CurvePoint, NotEnoughData, PriceCurve
-from craigslist.listings import Listing, ListingSourceError, OwnerType
+from craigslist.listings import Listing, ListingSourceError, OwnerType, Source
 from craigslist.search import Search, SearchResult
 
 
 def listing(post_id: int, owner_type: OwnerType, mileage: int | None, price: int = 10_000) -> Listing:
-    return Listing(post_id, f"car {post_id}", price, mileage, f"https://example.org/{post_id}", (), owner_type)
+    return Listing(
+        str(post_id), Source.CRAIGSLIST, f"car {post_id}", price, mileage, f"https://example.org/{post_id}", (), owner_type
+    )
 
 
 def curve(*points: tuple[float, float]) -> PriceCurve:
@@ -234,7 +236,7 @@ def test_the_pinned_listing_is_ringed_by_a_last_series_that_is_always_present():
     pinned = listing(2, OwnerType.OWNER, 60_000, price=12_000)
     result = SearchResult([listing(1, OwnerType.OWNER, 50_000), pinned], {}, {})
 
-    ringed = chart_options(SEARCH, result, pinned_id=2)
+    ringed = chart_options(SEARCH, result, pinned_id="2")
     plain = chart_options(SEARCH, result)
 
     assert ringed["series"][-1]["data"] == [[60_000, 12_000]]
@@ -246,7 +248,7 @@ def test_the_pinned_listing_is_ringed_by_a_last_series_that_is_always_present():
 def test_a_pinned_listing_without_mileage_gets_no_ring():
     result = SearchResult([listing(1, OwnerType.OWNER, None)], {}, {})
 
-    assert chart_options(SEARCH, result, pinned_id=1)["series"][-1]["data"] == []
+    assert chart_options(SEARCH, result, pinned_id="1")["series"][-1]["data"] == []
 
 
 def test_points_have_no_tooltip_and_the_cursor_draws_a_line_to_each_axis():

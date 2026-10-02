@@ -14,7 +14,7 @@ from craigslist.listings import (
     ListingSourceError,
     OwnerType,
     Search,
-    image_url,
+    Source,
     listing_attributes,
     parse_batch,
     parse_full,
@@ -82,7 +82,7 @@ def log_messages():
 
 
 def by_post_id(found: list[Listing]) -> dict[int, Listing]:
-    return {listing.post_id: listing for listing in found}
+    return {int(listing.id.split(":", 1)[1]): listing for listing in found}
 
 
 # Parsing
@@ -94,19 +94,18 @@ def test_parses_a_full_response_into_listings():
     assert len(page.listings) == 20
     assert page.reported_total == 1508
     assert page.listings[0] == Listing(
-        post_id=7968808449,
+        id="craigslist:7968808449",
+        source=Source.CRAIGSLIST,
         title="2015 MERCEDES BENZ C300 FULLY LOADED VERY CLEAN!!!",
         price=7500,
         mileage=140000,
         url="https://www.craigslist.org/view/d/laguna-niguel-2015-mercedes-benz-c300/rbFpehbubddhXXYr61UQG5",
-        image_codes=page.listings[0].image_codes,
+        images=page.listings[0].images,
         owner_type=OwnerType.OWNER,
         posted=datetime(2026, 9, 18, 19, 2, 16, tzinfo=UTC),
         location="Laguna Niguel",
     )
-    assert image_url(page.listings[0].image_codes[0]) == (
-        "https://images.craigslist.org/00h0h_4R4y4ghJzOC_0CI0t2_600x450.jpg"
-    )
+    assert page.listings[0].images[0] == "https://images.craigslist.org/00h0h_4R4y4ghJzOC_0CI0t2_600x450.jpg"
 
 
 def test_parses_a_batch_response_into_listings():
@@ -119,7 +118,7 @@ def test_parses_a_batch_response_into_listings():
     assert corvette.price == 10900
     assert corvette.mileage == 75000
     assert corvette.url == "https://www.craigslist.org/view/d/westminster-2004-chevy-corvette/f6vnEnsiPRzJzzY9C6CtsJ"
-    assert image_url(corvette.image_codes[0]) == "https://images.craigslist.org/01414_4krbn3IWsj9_0wU0oG_600x450.jpg"
+    assert corvette.images[0] == "https://images.craigslist.org/01414_4krbn3IWsj9_0wU0oG_600x450.jpg"
     assert corvette.owner_type == OwnerType.OWNER
 
 
@@ -129,7 +128,7 @@ def test_full_result_with_extra_integer_after_the_image_suffix_is_read():
     assert rdx.title == "2014 Acura RDX w/Tech Package"
     assert rdx.price == 5000
     assert rdx.mileage == 199400
-    assert rdx.image_codes[0] == "00808_gPzpE2Dr7ep_0CI0t2"
+    assert rdx.images[0] == "https://images.craigslist.org/00808_gPzpE2Dr7ep_0CI0t2_600x450.jpg"
 
 
 def test_listing_attributes_parse_a_saved_detail_page():
@@ -188,8 +187,8 @@ def test_result_with_no_photos_is_kept_with_no_image_codes():
     full = by_post_id(parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings)
     batch = by_post_id(parse_batch(fixture("owner_batch_0.json"), OwnerType.OWNER).listings)
 
-    assert full[7966353423 + 2369301].image_codes == ()
-    assert batch[7954482646 + 14240078].image_codes == ()
+    assert full[7966353423 + 2369301].images == ()
+    assert batch[7954482646 + 14240078].images == ()
 
 
 def test_result_with_no_mileage_is_kept_with_unknown_mileage():
@@ -210,11 +209,11 @@ def test_duplicate_image_codes_are_collapsed_in_order():
     pilot = by_post_id(parse_batch(fixture("owner_batch_0.json"), OwnerType.OWNER).listings)[7968471033]
 
     # The fixture lists 00G0G_h8GaX6AVHXa_0CI0t2 twice in a row, at positions 11 and 12.
-    assert len(pilot.image_codes) == 18
-    assert pilot.image_codes[9:12] == (
-        "00V0V_iohoXTev5ow_0CI0t2",
-        "00G0G_h8GaX6AVHXa_0CI0t2",
-        "00909_8JEMaXX4qIx_0CI0t2",
+    assert len(pilot.images) == 18
+    assert pilot.images[9:12] == (
+        "https://images.craigslist.org/00V0V_iohoXTev5ow_0CI0t2_600x450.jpg",
+        "https://images.craigslist.org/00G0G_h8GaX6AVHXa_0CI0t2_600x450.jpg",
+        "https://images.craigslist.org/00909_8JEMaXX4qIx_0CI0t2_600x450.jpg",
     )
 
 
@@ -286,7 +285,7 @@ def test_search_needing_more_than_one_page_returns_every_result(small_pages):
         | by_post_id(parse_batch(fixture("owner_batch_20.json"), OwnerType.OWNER).listings)
     )
     assert len(expected) > FIXTURE_PAGE_SIZE
-    assert sorted(listing.post_id for listing in results.listings) == sorted(expected)
+    assert sorted(int(listing.id.split(":", 1)[1]) for listing in results.listings) == sorted(expected)
 
 
 def test_paging_stops_on_a_short_batch_not_on_the_reported_total(small_pages, log_messages):
@@ -326,9 +325,9 @@ def test_results_beyond_the_reported_total_are_all_returned_and_logged(log_messa
 
 def test_batches_repeating_the_first_page_give_no_duplicate_listings(small_pages):
     results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), paged_owner_fetcher())
-    post_ids = [listing.post_id for listing in results.listings]
+    ids = [listing.id for listing in results.listings]
 
-    assert len(post_ids) == len(set(post_ids))
+    assert len(ids) == len(set(ids))
 
 
 def test_full_first_page_with_no_cache_id_ends_the_search(small_pages):
@@ -377,7 +376,7 @@ def test_batches_are_reported_in_request_order_and_add_up_to_the_listings(small_
     assert len(batches) == 3  # the full page, then batches at offsets 0 and 20
     assert [listing for batch in batches for listing in batch] == results.listings
     assert batches[0] == parse_full(fixture("owner_full.json"), OwnerType.OWNER).listings
-    assert not {listing.post_id for listing in batches[1]} & {listing.post_id for listing in batches[0]}
+    assert not {listing.id for listing in batches[1]} & {listing.id for listing in batches[0]}
     assert results.error is None and not results.cancelled and results.requests == 4
 
 
