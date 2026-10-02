@@ -5,20 +5,20 @@ Finds used cars for sale on Craigslist and shows how their price falls with mile
 ## Searching
 
 **Search**:
-One question put to Craigslist: a state, a city, a make, a model, and which Owner types to include.
+One question put to Craigslist: a state, a city, a make, a model, and which Owner types and Sources to include.
 _Avoid_: Query, scrape
 
 **Listing**:
-One car for sale on Craigslist, with its price, mileage, photos, and Owner type.
+One car for sale, with its price, mileage, photos, Owner type, and Source.
 _Avoid_: Car, post, posting, result
 
 **Owner type**:
 Who is selling a Listing: a private owner or a dealer.
 _Avoid_: Seller type, purveyor
 
-**Listing source**:
-Where Listings come from for a Search: Craigslist's search results.
-_Avoid_: Scraper, crawler
+**Source**:
+The website a Listing was found on: Craigslist or Carfax. A Search can include either or both. Carfax has dealers only, and the same car can appear once per Source.
+_Avoid_: Listing source, scraper, crawler
 
 **Listing details**:
 The extra attributes a Listing's own page carries (transmission, condition, paint, title status), fetched only when asked for.
@@ -27,7 +27,7 @@ _Avoid_: Attributes, specs
 ## Pricing
 
 **Price curve**:
-The fitted line of price against mileage for one Owner type in a Search.
+The fitted line of price against mileage for one Owner type from one Source in a Search.
 _Avoid_: Trend line, fit, regression
 
 ## The page
