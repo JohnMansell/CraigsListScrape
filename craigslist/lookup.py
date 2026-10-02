@@ -43,3 +43,12 @@ def makes() -> list[str]:
 def models(make: str) -> list[str]:
     """Models of `make`, in file order."""
     return [row["model"] for row in _read_csv(MAKES_MODELS_CSV) if row["make"].casefold() == make.casefold()]
+
+
+def carfax_model(make: str, model: str) -> str | None:
+    """Carfax's name for `make`/`model`, or None when Carfax doesn't carry it (or
+    the pair isn't in the CSV at all)."""
+    for row in _read_csv(MAKES_MODELS_CSV):
+        if row["make"].casefold() == make.casefold() and row["model"].casefold() == model.casefold():
+            return row["carfax_model"] or None
+    return None
