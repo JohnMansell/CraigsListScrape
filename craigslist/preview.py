@@ -9,7 +9,7 @@ LOADING_TEXT = "Loading details from the listing..."
 EMPTY_TEXT = "No details available"
 IDLE_TEXT = "Hover a point to preview it. Click a point to pin it."
 UNKNOWN_MILEAGE = "Mileage not listed"
-LINK_LABELS = {Source.CRAIGSLIST: "Open on Craigslist", Source.CARFAX: "Open on Carfax"}
+LINK_LABELS = {Source.CRAIGSLIST: "Open on Craigslist", Source.CARFAX: "Open on Carfax", Source.CARMAX: "Open on CarMax"}
 
 
 @dataclass(frozen=True)
@@ -28,15 +28,15 @@ class PreviewContent:
     """A hotlinked 600x450 photo URL, or None so the panel draws no image block."""
     url: str
     link_label: str
-    """"Open on Craigslist" or "Open on Carfax"."""
+    """"Open on Craigslist", "Open on Carfax" or "Open on CarMax"."""
     dealer: str | None
-    """The dealer's name. Carfax only; None for a Craigslist Listing."""
+    """The dealer's name (CarMax: the store). None for a Craigslist Listing."""
     owners: str | None
-    """"One owner" or "Previous owners". Carfax only; None for a Craigslist Listing."""
+    """"One owner" or "Previous owners". Carfax; CarMax only ever "One owner". None for Craigslist."""
     accidents: str | None
-    """"No accidents reported" or "Accident reported". Carfax only; None for a Craigslist Listing."""
+    """"No accidents reported" or "Accident reported". Carfax only; None otherwise."""
     price_drop: str | None
-    """A note when Carfax's price history has a drop. None otherwise."""
+    """A note when Carfax's price history or CarMax's `hasPriceDrop` shows a drop. None otherwise."""
 
 
 def preview_content(listing: Listing) -> PreviewContent:
@@ -46,7 +46,7 @@ def preview_content(listing: Listing) -> PreviewContent:
         price=f"${listing.price:,}",
         mileage=f"{listing.mileage:,} mi" if listing.mileage is not None else UNKNOWN_MILEAGE,
         owner=str(listing.owner_type).capitalize(),
-        posted=posted_text(listing.posted),
+        posted=_dated_text(listing),
         location=listing.location or None,
         image=listing.images[0] if listing.images else None,
         url=listing.url,
@@ -56,6 +56,14 @@ def preview_content(listing: Listing) -> PreviewContent:
         accidents=_accidents_text(listing.no_accidents),
         price_drop="Price dropped" if listing.price_dropped else None,
     )
+
+
+def _dated_text(listing: Listing) -> str | None:
+    """Craigslist and Carfax "Posted ..."; CarMax's date is when the car went on sale."""
+    text = posted_text(listing.posted)
+    if text is not None and listing.source == Source.CARMAX:
+        return "On sale since" + text.removeprefix("Posted")
+    return text
 
 
 def _owners_text(one_owner: bool | None) -> str | None:
@@ -84,7 +92,7 @@ def no_mileage_listings(shown: Search, result: SearchResult) -> list[Listing]:
         for listing in result.listings
         if listing.mileage is None and (
             (listing.source == Source.CRAIGSLIST and listing.owner_type in shown.owner_types)
-            or (listing.source == Source.CARFAX and shown.carfax)
+            or (listing.source != Source.CRAIGSLIST and listing.source in shown.sources)
         )
     ]
 
@@ -108,11 +116,12 @@ def detail_lines(details: dict[str, str] | None) -> list[str] | str:
 def load_details(listing: Listing, fetch: Fetch | None = None) -> dict[str, str]:
     """Fetch `listing`'s detail page attributes. Blocking, so run it off the UI thread.
 
-    With no `fetch`, uses a live HttpFetcher that is closed afterwards. A Carfax Listing
-    already carries every detail Preview shows; `www.carfax.com` is DataDome-blocked
-    anyway, so this never requests it.
+    With no `fetch`, uses a live HttpFetcher that is closed afterwards. Only Craigslist
+    Listings have a detail page to fetch: another source's Listing already carries every
+    detail Preview shows (`www.carfax.com` is DataDome-blocked and CarMax's robots.txt disallows
+    `/car/*`), so this never requests it.
     """
-    if listing.source == Source.CARFAX:
+    if listing.source != Source.CRAIGSLIST:
         return {}
     if fetch is not None:
         return listing_attributes(listing, fetch)

@@ -64,6 +64,7 @@ class Source(StrEnum):
 
     CRAIGSLIST = "craigslist"
     CARFAX = "carfax"
+    CARMAX = "carmax"
 
 
 PURVEYOR_CODES = {145: OwnerType.OWNER, 146: OwnerType.DEALER}
@@ -101,13 +102,13 @@ class Listing:
     location: str | None = None
     """The seller-typed location text, typos included. None when the response does not carry it."""
     dealer: str | None = None
-    """The dealer's name. Carfax only; None for Craigslist."""
+    """The dealer's name. Carfax and CarMax; None for Craigslist."""
     one_owner: bool | None = None
-    """Carfax's `oneOwner`. None for Craigslist."""
+    """Carfax's `oneOwner`; CarMax: True when `highlights` has `singleOwner`, else None. None for Craigslist."""
     no_accidents: bool | None = None
-    """Carfax's `noAccidents`. None for Craigslist."""
+    """Carfax's `noAccidents`. None for Craigslist and CarMax."""
     price_dropped: bool | None = None
-    """Carfax's price history has a drop. None for Craigslist."""
+    """Carfax's price history has a drop; CarMax's `hasPriceDrop`. None for Craigslist."""
 
 
 @dataclass(frozen=True)

@@ -21,13 +21,13 @@ The website a Listing was found on: Craigslist, Carfax or CarMax. A Search can i
 _Avoid_: Listing source, scraper, crawler
 
 **Listing details**:
-The extra attributes a Craigslist Listing's own page carries (transmission, condition, paint, title status), fetched only when asked for. A Carfax Listing has no separate Listing details: its Search result already carries everything Preview shows (dealer, owners, accidents, a price-drop note).
+The extra attributes a Craigslist Listing's own page carries (transmission, condition, paint, title status), fetched only when asked for. A Carfax Listing has no separate Listing details: its Search result already carries everything Preview shows (dealer, owners, accidents, a price-drop note). A CarMax Listing is the same: store name and city, an on-sale date, a price-drop note, and "one owner" only when known, with no accidents line; its page is never fetched.
 _Avoid_: Attributes, specs
 
 ## Pricing
 
 **Price curve**:
-The fitted line of price against mileage for one Owner type from one Source in a Search.
+The fitted line of price against mileage for one Owner type from one Source in a Search. Craigslist has one per Owner type; Carfax and CarMax have one each.
 _Avoid_: Trend line, fit, regression
 
 ## The page
@@ -41,5 +41,5 @@ The Listing shown in the panel beside the chart while the pointer is over its po
 _Avoid_: Tooltip, hover card
 
 **Pinned Listing**:
-The Listing a person clicked. It stays in the panel when nothing is being previewed. Its Listing details are loaded for a Craigslist Listing; a Carfax Listing needs no load, its Search result already has them.
+The Listing a person clicked. It stays in the panel when nothing is being previewed. Its Listing details are loaded for a Craigslist Listing; a Carfax or CarMax Listing needs no load, its Search result already has them.
 _Avoid_: Selected listing, active listing

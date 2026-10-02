@@ -22,6 +22,17 @@ is present. The tests shrink the page sizes to PAGE_SIZE to exercise paging.
 - carfax_last_page.json: Honda Fit, same zip/radius - the last, short page.
 - carfax_empty.json: an unknown model - a search with no results (totalListingCount,
   totalPageCount and listings all absent, not zero or empty).
+- carmax_page_1.json: Honda Civic, zip 94103, radius-50, shipping=0 - first page, full.
+  One listing has its price and mileage removed, to give the tests a listing with
+  neither (not seen missing live).
+- carmax_page_2.json: the same search, skip 20 - a later full page.
+- carmax_last_page.json: the same search, skip 40 - the last, short page.
+- carmax_empty.json: Honda Prelude, same zip/radius - a real model with no stock in
+  range (totalCount 0, items empty).
+- carmax_unknown_model.json: an unknown model slug - CarMax ignores it and returns the
+  whole make, and selectedFacets has no model entry.
+Each CarMax response keeps selectedFacets as (category, value) pairs, the check for an
+ignored slug.
 """
 import json
 import sys
@@ -31,7 +42,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from craigslist import listings  # noqa: E402
+from craigslist import carmax, listings  # noqa: E402
 from craigslist.listings import HttpFetcher, OwnerType, Search  # noqa: E402
 from craigslist.lookup import City  # noqa: E402
 
@@ -50,6 +61,14 @@ CARFAX_LISTING_FIELDS = (
     "priceHistory", "vdpUrl",
 )
 CARFAX_DEALER_FIELDS = ("name", "city", "state")
+
+CARMAX_ZIP = "94103"
+CARMAX_RESPONSE_FIELDS = ("totalCount", "take", "searchFailed", "hasSearchError")
+CARMAX_LISTING_FIELDS = (
+    "stockNumber", "vin", "year", "make", "model", "trim", "body", "basePrice", "originalPrice",
+    "hasPriceDrop", "mileage", "storeName", "storeCity", "stateAbbreviation", "distance",
+    "lastMadeSaleableDate", "highlights", "heroImageUrl", "isSaleable", "exteriorColor", "transmission",
+)
 
 Item = list[Any]
 
@@ -178,6 +197,47 @@ def refresh_carfax(fetch: HttpFetcher) -> None:
     save("carfax_empty.json", {key: empty.get(key) for key in ("page", "pageSize", "totalPageCount")})
 
 
+def carmax_page(fetch: carmax.HttpFetcher, uri: str, skip: int) -> dict[str, Any]:
+    """One CarMax search page of PAGE_SIZE items, parsed. The fetcher warms up on its first call."""
+    return json.loads(fetch(carmax.search_url(CARMAX_ZIP, uri, skip, PAGE_SIZE)))
+
+
+def trim_carmax_response(response: dict[str, Any], count: int) -> dict[str, Any]:
+    items = [{key: item[key] for key in CARMAX_LISTING_FIELDS if key in item} for item in response["items"][:count]]
+    facets = [{key: facet[key] for key in ("category", "value")} for facet in response["selectedFacets"]]
+    return {key: response[key] for key in CARMAX_RESPONSE_FIELDS} | {"selectedFacets": facets, "items": items}
+
+
+def refresh_carmax(fetch: carmax.HttpFetcher) -> None:
+    page_1 = carmax_page(fetch, "/cars/honda/civic", 0)
+    if len(page_1["items"]) < PAGE_SIZE:
+        sys.exit(f"carmax civic page 1 returned {len(page_1['items'])} results, need {PAGE_SIZE} to page")
+    trimmed_1 = trim_carmax_response(page_1, PAGE_SIZE)
+    trimmed_1["items"][0].pop("basePrice", None)
+    trimmed_1["items"][0].pop("mileage", None)
+    save("carmax_page_1.json", trimmed_1)
+
+    page_2 = carmax_page(fetch, "/cars/honda/civic", PAGE_SIZE)
+    if len(page_2["items"]) < PAGE_SIZE:
+        sys.exit("carmax civic page 2 is short; the later-page fixture needs a full page")
+    save("carmax_page_2.json", trim_carmax_response(page_2, PAGE_SIZE))
+
+    last_page = carmax_page(fetch, "/cars/honda/civic", 2 * PAGE_SIZE)
+    if not 0 < len(last_page["items"]) < PAGE_SIZE:
+        sys.exit("carmax civic page 3 is no longer short and non-empty; pick another model for the last-page fixture")
+    save("carmax_last_page.json", trim_carmax_response(last_page, len(last_page["items"])))
+
+    empty = carmax_page(fetch, "/cars/honda/prelude", 0)
+    if empty["items"] or empty["totalCount"]:
+        sys.exit("carmax prelude search now has results; pick another model with no stock near the zip")
+    save("carmax_empty.json", trim_carmax_response(empty, 0))
+
+    unknown = carmax_page(fetch, "/cars/honda/zzznotreal", 0)
+    if any(facet["category"] in ("model", "series") for facet in unknown["selectedFacets"]):
+        sys.exit("carmax now recognises the nonsense model; pick another")
+    save("carmax_unknown_model.json", trim_carmax_response(unknown, PAGE_SIZE))
+
+
 def main() -> None:
     fetch = listings.HttpFetcher()
     try:
@@ -186,6 +246,11 @@ def main() -> None:
         refresh_carfax(fetch)
     finally:
         fetch.close()
+    carmax_fetch = carmax.HttpFetcher()
+    try:
+        refresh_carmax(carmax_fetch)
+    finally:
+        carmax_fetch.close()
 
 
 if __name__ == "__main__":
