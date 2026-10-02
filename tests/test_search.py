@@ -159,7 +159,7 @@ def test_run_search_includes_carfax_listings_alongside_craigslist():
     result = run_search(BOTH_SEARCH, dual_fetch(fixture("dealer_full.json"), fixture("carfax_last_page.json")))
 
     assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX}
-    assert sum(listing.source == Source.CARFAX for listing in result.listings) == 9
+    assert sum(listing.source == Source.CARFAX for listing in result.listings) == 7
     assert all(listing.owner_type == OwnerType.DEALER for listing in result.listings if listing.source == Source.CARFAX)
 
 
@@ -178,7 +178,7 @@ def test_a_car_in_both_sources_is_not_deduplicated():
 
     ids = [listing.id for listing in result.listings]
     assert len(ids) == len(set(ids))  # unique across Sources
-    assert len(result.listings) == 19 + 9  # dealer_full has one result with no price
+    assert len(result.listings) == 19 + 7  # dealer_full has one no-price result, carfax_last_page has two
 
 
 def test_a_carfax_failure_keeps_the_craigslist_listings():
@@ -206,7 +206,7 @@ def test_a_craigslist_failure_keeps_the_carfax_listings():
     assert isinstance(result.error, ListingSourceError)
     assert result.carfax_error is None
     assert all(listing.source == Source.CARFAX for listing in result.listings)
-    assert len(result.listings) == 9
+    assert len(result.listings) == 7
 
 
 def test_should_stop_stops_both_sources():
@@ -228,5 +228,5 @@ def test_carfax_alone_needs_no_owner_type():
         lambda url: fixture("carfax_last_page.json"),
     )
 
-    assert len(result.listings) == 9
+    assert len(result.listings) == 7
     assert result.curves == {}
