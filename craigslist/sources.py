@@ -9,6 +9,7 @@ from typing import Protocol
 
 from craigslist import lookup
 from craigslist.carfax import HttpFetcher as CarfaxHttpFetcher, Search as CarfaxSearch, search_carfax
+from craigslist.carmax import HttpFetcher as CarmaxHttpFetcher, Search as CarmaxSearch, search_carmax
 from craigslist.listings import Fetch, Listing, ListingSourceError, Source
 
 OnBatch = Callable[[list[Listing]], None]
@@ -73,8 +74,15 @@ def _search_carfax(
     return search_carfax(CarfaxSearch(city, make, model), fetch, on_batch, should_stop)
 
 
+def _search_carmax(
+    city: lookup.City, make: str, model: str, fetch: Fetch, on_batch: OnBatch | None, should_stop: ShouldStop | None
+) -> SourceResults:
+    return search_carmax(CarmaxSearch(city, make, model), fetch, on_batch, should_stop)
+
+
 SOURCES: dict[Source, SourceInfo] = {
     Source.CARFAX: SourceInfo("Carfax", "#2ca02c", "circle", _search_carfax, CarfaxHttpFetcher, "carfax"),
+    Source.CARMAX: SourceInfo("CarMax", "#9467bd", "diamond", _search_carmax, CarmaxHttpFetcher, "carmax"),
 }
 """In checkbox and series order."""
 

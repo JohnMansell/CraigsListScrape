@@ -174,3 +174,58 @@ def test_no_mileage_listings_excludes_a_carfax_dealer_from_the_craigslist_dealer
 
     shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), sources=())
     assert no_mileage_listings(shown, result) == []
+
+
+# CarMax
+
+
+def carmax_listing(
+    stock: int = 1,
+    mileage: int | None = 50_000,
+    one_owner: bool | None = True,
+    price_dropped: bool | None = True,
+    posted: datetime | None = datetime(2026, 9, 28, 14, 3, tzinfo=UTC),
+) -> Listing:
+    return Listing(
+        f"carmax:{stock}", Source.CARMAX, f"car {stock}", 12_500, mileage,
+        f"https://www.carmax.com/car/{stock}", ("https://img.carmax.com/hero.jpg",), OwnerType.DEALER, posted,
+        "Vallejo, CA", "CarMax Vallejo", one_owner, None, price_dropped,
+    )
+
+
+def test_content_from_a_carmax_listing_shows_store_city_on_sale_date_and_price_drop():
+    content = preview_content(carmax_listing())
+
+    assert content.link_label == "Open on CarMax"
+    assert content.url == "https://www.carmax.com/car/1"
+    assert content.dealer == "CarMax Vallejo"
+    assert content.location == "Vallejo, CA"
+    assert content.posted == "On sale since 2026-09-28 14:03 UTC"
+    assert content.price_drop == "Price dropped"
+    assert content.owners == "One owner"
+    assert content.accidents is None
+    assert content.image == "https://img.carmax.com/hero.jpg"
+
+
+def test_a_carmax_listing_says_one_owner_only_when_known():
+    content = preview_content(carmax_listing(one_owner=None, price_dropped=None, posted=None))
+
+    assert content.owners is None
+    assert content.price_drop is None
+    assert content.posted is None
+
+
+def test_load_details_never_fetches_a_carmax_listing():
+    def fetch(url: str) -> str:
+        raise AssertionError("must not fetch a CarMax Listing: robots.txt disallows /car/*")
+
+    assert load_details(carmax_listing(), fetch) == {}
+
+
+def test_no_mileage_listings_includes_carmax_when_shown():
+    found = carmax_listing(1, mileage=None)
+    result = SearchResult([found], {}, {})
+
+    shown = Search("CA", "Orange County", "Honda", "Civic", owner_types=(), sources=(Source.CARMAX,))
+    assert no_mileage_listings(shown, result) == [found]
+    assert no_mileage_listings(SEARCH, result) == []

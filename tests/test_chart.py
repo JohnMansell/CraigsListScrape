@@ -17,6 +17,7 @@ from craigslist.search import Search, SearchResult
 from craigslist.sources import SOURCES
 
 CARFAX = SOURCES[Source.CARFAX]
+CARMAX = SOURCES[Source.CARMAX]
 
 
 def listing(post_id: int, owner_type: OwnerType, mileage: int | None, price: int = 10_000) -> Listing:
@@ -381,3 +382,69 @@ def test_unfetched_message_names_carfax():
 
     assert unfetched_message(fetched, [], [Source.CARFAX]) == "Search again to load carfax listings"
     assert unfetched_message(fetched, [], []) is None
+
+
+# CarMax
+
+
+def carmax_listing(post_id: int, mileage: int | None, price: int = 10_000) -> Listing:
+    return Listing(
+        f"carmax:{post_id}", Source.CARMAX, f"carmax car {post_id}", price, mileage,
+        f"https://www.carmax.com/car/{post_id}", (), OwnerType.DEALER,
+    )
+
+
+CARMAX_SEARCH = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), sources=(Source.CARFAX, Source.CARMAX))
+
+
+def test_carmax_series_is_hollow_with_its_own_colour_legend_entry_and_curve():
+    result = SearchResult(
+        [carfax_listing(1, 50_000, 9_000), carmax_listing(2, 60_000, 11_000)], {}, {},
+        source_curves={Source.CARMAX: curve((0, 25_000), (100_000, 10_000))},
+    )
+
+    options = chart_options(CARMAX_SEARCH, result)
+
+    carmax = series_named(options, CARMAX.name)
+    assert carmax["data"] == [[60_000, 11_000]]
+    assert carmax["itemStyle"]["color"] == "transparent"
+    assert carmax["itemStyle"]["borderColor"] == CARMAX.color
+    assert CARMAX.color not in (OWNER_COLOR, DEALER_COLOR, CARFAX.color)
+    assert series_named(options, f"{CARMAX.name} curve")["lineStyle"]["color"] == CARMAX.color
+    assert CARMAX.name in options["legend"]["data"]
+    assert series_named(options, CARFAX.name)["data"] == [[50_000, 9_000]]
+
+
+def test_carmax_series_is_absent_when_the_search_excludes_it():
+    result = SearchResult([carmax_listing(1, 10_000)], {}, {})
+
+    options = chart_options(CARFAX_SEARCH, result)
+
+    assert all(series["name"] != CARMAX.name for series in options["series"])
+
+
+def test_status_text_counts_carmax_listings_apart_from_carfax():
+    result = SearchResult([carfax_listing(1, 1), carmax_listing(2, 1), carmax_listing(3, 1)], {}, {})
+
+    assert status_text(CARMAX_SEARCH, result) == "3 listings: 0 dealer, 1 Carfax, 2 CarMax"
+
+
+def test_failure_banner_names_carmax_and_keeps_the_others_listings():
+    result = SearchResult([carfax_listing(1, 1)], {}, {}, source_errors={Source.CARMAX: ListingSourceError("HTTP 500")})
+
+    assert failure_banner(result) == "CarMax stopped answering. Showing 1 listings; there may be more."
+
+
+def test_curve_notes_names_carmax_when_it_has_too_few_points():
+    result = SearchResult([], {}, {}, source_curves={Source.CARMAX: NotEnoughData("too few")})
+
+    assert "Too few CarMax listings for a curve" in curve_notes(CARMAX_SEARCH, result)
+
+
+def test_pin_ring_matches_a_carmax_listing():
+    found = carmax_listing(1, 60_000, price=15_000)
+    result = SearchResult([carfax_listing(1, 10_000, 5_000), found], {}, {})
+
+    options = chart_options(CARMAX_SEARCH, result, pinned_id=found.id)
+
+    assert options["series"][-1]["data"] == [[60_000, 15_000]]
