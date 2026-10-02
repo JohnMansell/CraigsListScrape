@@ -33,7 +33,7 @@ uv add <pkg>                             # add a dependency (updates pyproject.t
 - `search.py`: `run_search(Search, fetch, on_batch, should_stop)` validates lookup values, reports each API page's Listings as it arrives, then returns Listings and a Price curve per owner type (`curve.py`). A failed request or a stop returns the Listings that arrived, with `error` or `cancelled` set, instead of raising. `run_live_search` does the same with its own `HttpFetcher` when no fetch is given.
 - `listings.py`: Listing source. `search_listings(Search, fetch)` returns Listings (including `posted` and `location`, each `None` when unknown) from Craigslist's undocumented JSON search API (`sapi.craigslist.org`), one API search per owner type. `fetch(url) -> str` is passed in; `HttpFetcher` is the live one (User-Agent, 0.5 s pacing). Every Craigslist URL and response-layout guess lives here. Findings behind it: `docs/research/craigslist-search.md`.
 - `log.py`: `configure_logging` sets up loguru: stderr plus `craigslist.log`, rotated at midnight with 10 files kept, in `logs/` or `$CRAIGSLIST_LOGDIR`. Calling it again replaces the handlers.
-- `lookup.py`: `states`, `cities(state)` (each a `City` with name and Craigslist base URL), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`; edit the CSVs to add a city or model. State and make lookups ignore case.
+- `lookup.py`: `states`, `cities(state)` (each a `City` with name, Craigslist base URL, and a zip near its centre for Carfax's zip + radius search), `makes`, `models(make)`. Reads `data/cities.csv` and `data/makes_models.csv`; edit the CSVs to add a city or model. State and make lookups ignore case.
 
 ## Gotchas
 
