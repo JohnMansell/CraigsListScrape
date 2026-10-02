@@ -17,6 +17,10 @@ class City:
     name: str
     url: str
     """The city's Craigslist base URL, such as https://orangecounty.craigslist.org"""
+    zip: str = ""
+    """A zip near the city's centre, for Carfax's zip + radius search. Some Craigslist
+    areas are regions ("Akron / Canton", "Inland Empire"); their zip is the largest
+    city in the region, not necessarily the one named first."""
 
 
 @cache
@@ -32,7 +36,9 @@ def states() -> list[str]:
 def cities(state: str) -> list[City]:
     """Cities in `state`, in file order."""
     return [
-        City(row["city"], row["url"]) for row in _read_csv(CITIES_CSV) if row["state"].casefold() == state.casefold()
+        City(row["city"], row["url"], row["zip"])
+        for row in _read_csv(CITIES_CSV)
+        if row["state"].casefold() == state.casefold()
     ]
 
 
