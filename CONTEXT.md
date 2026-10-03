@@ -32,6 +32,10 @@ _Avoid_: Trend line, fit, regression
 
 ## The page
 
+**Display filter**:
+A rule, such as "one owner", that fades the Listings failing it to light-grey dots on the chart. It never removes a Listing from a Price curve, so filtering never makes a curve less accurate.
+_Avoid_: Search filter, query filter
+
 **Search page**:
 The one page where a person runs a Search and reads the chart of its Listings.
 _Avoid_: Dashboard, app

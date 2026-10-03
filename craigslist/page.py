@@ -28,6 +28,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
+from craigslist.filters import Filters
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
@@ -48,6 +49,8 @@ POLL_SECONDS = 0.25
 TITLE = "Craigslist car prices"
 STORAGE_DIR = Path(".nicegui")
 """NiceGUI's per-browser storage files, and the generated secret that signs the browser cookie."""
+FLAG_FILTERS = (("one_owner", "One owner"), ("no_accidents", "No accidents"), ("price_dropped", "Price dropped"))
+"""Each yes/no display filter: its `Filters` field and its switch's label."""
 SEARCH_KEYS = ("state", "city", "make", "model")
 FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
@@ -193,6 +196,8 @@ def search_page(request: Request) -> None:
     """None while the Pinned Listing's details load."""
     list_mode = False
     """The panel lists the Listings with no mileage, until one is pinned."""
+    filters = Filters()
+    """The display filters: they fade points, never refit a curve or refetch."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -246,6 +251,11 @@ def search_page(request: Request) -> None:
         form.sources[source] = checked
         remember()
         refresh_search_button()
+        redraw()
+
+    def flag_changed(name: str, **changes: bool) -> None:
+        nonlocal filters
+        filters = replace(filters, **{name: replace(getattr(filters, name), **changes)})
         redraw()
 
     def redraw() -> None:
@@ -309,7 +319,7 @@ def search_page(request: Request) -> None:
         """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
         if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
             return None
-        rows = plotted_listings(shown_search, shown_result).get(str(args.get("seriesName")))
+        rows = plotted_listings(shown_search, shown_result, filters).get(str(args.get("seriesName")))
         index = args.get("dataIndex")
         if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
             return None
@@ -354,7 +364,7 @@ def search_page(request: Request) -> None:
         """Move the ring to the Pinned Listing without redrawing the points."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None))
+            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters))
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -437,7 +447,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
@@ -455,7 +465,7 @@ def search_page(request: Request) -> None:
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
         if search.owner_types or search.sources:
-            status.set_text(status_text(search, result) if final else progress_text(len(result.listings)))
+            status.set_text(status_text(search, result, filters) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
@@ -470,6 +480,11 @@ def search_page(request: Request) -> None:
                 ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
+        with ui.row().classes("w-full items-center gap-4"):
+            for name, label in FLAG_FILTERS:
+                with ui.row().classes("items-center gap-0 no-wrap"):
+                    ui.switch(label, on_change=lambda e, name=name: flag_changed(name, on=e.value))
+                    ui.checkbox("include unknown", value=True, on_change=lambda e, name=name: flag_changed(name, include_unknown=e.value)).props("dense size=xs").classes("text-xs opacity-70")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):

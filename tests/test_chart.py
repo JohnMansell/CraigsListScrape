@@ -1,6 +1,10 @@
+from dataclasses import replace
+
 from craigslist.chart import (
     plotted_listings,
     DEALER_COLOR,
+    FADED_COLOR,
+    FADED_SIZE,
     OWNER_COLOR,
     chart_options,
     curve_notes,
@@ -11,6 +15,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
+from craigslist.filters import Filters, Flag
 from craigslist.curve import CurvePoint, NotEnoughData, PriceCurve
 from craigslist.listings import Listing, ListingSourceError, OwnerType, Source
 from craigslist.search import Search, SearchResult
@@ -278,6 +283,7 @@ def test_points_have_no_tooltip_and_the_cursor_draws_a_line_to_each_axis():
 # Carfax
 
 
+CARFAX_SEARCH_WITH_OWNERS = Search("CA", "Orange County", "Honda", "Civic", sources=(Source.CARFAX,))
 CARFAX_SEARCH = Search("CA", "Orange County", "Honda", "Civic", owner_types=(OwnerType.DEALER,), sources=(Source.CARFAX,))
 
 
@@ -448,3 +454,93 @@ def test_pin_ring_matches_a_carmax_listing():
     options = chart_options(CARMAX_SEARCH, result, pinned_id=found.id)
 
     assert options["series"][-1]["data"] == [[60_000, 15_000]]
+
+
+# Display filters
+
+
+ONE_OWNER = Filters(one_owner=Flag(on=True, include_unknown=False))
+
+
+def filtered_result() -> SearchResult:
+    return SearchResult(
+        [
+            replace(listing(1, OwnerType.OWNER, 50_000, 12_000), one_owner=True),
+            listing(2, OwnerType.OWNER, 60_000, 11_000),
+            replace(carfax_listing(3, 40_000, 15_000), one_owner=False),
+            replace(carfax_listing(4, 70_000, 9_000), one_owner=True),
+        ],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+        source_curves={Source.CARFAX: curve((0, 25_000), (100_000, 10_000))},
+    )
+
+
+def test_a_listing_failing_a_filter_is_a_small_solid_light_grey_dot():
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, filtered_result(), filters=ONE_OWNER)
+
+    owner = series_named(options, "Owner")["data"]
+    carfax = series_named(options, CARFAX.name)["data"]
+    faded = [point for point in owner + carfax if isinstance(point, dict) and point.get("itemStyle")]
+    assert len(faded) == 2
+    for point in faded:
+        assert point["symbol"] == "circle"
+        assert point["symbolSize"] == FADED_SIZE < series_named(options, "Owner")["symbolSize"]
+        assert point["itemStyle"] == {"color": FADED_COLOR, "borderWidth": 0}
+    assert [70_000, 9_000] in carfax and [50_000, 12_000] in owner
+
+
+def test_faded_points_are_drawn_first_and_still_map_back_to_their_listings():
+    result = filtered_result()
+
+    plotted = plotted_listings(CARFAX_SEARCH_WITH_OWNERS, result, ONE_OWNER)
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, filters=ONE_OWNER)
+
+    assert [item.id for item in plotted[CARFAX.name]] == ["carfax:3", "carfax:4"]
+    assert [item.id for item in plotted["Owner"]] == ["2", "1"]
+    for name, rows in plotted.items():
+        data = series_named(options, name)["data"]
+        for row, point in zip(rows, data, strict=True):
+            value = point["value"] if isinstance(point, dict) else point
+            assert value == [row.mileage, row.price]
+
+
+def test_curves_and_default_axes_are_the_same_with_or_without_filters():
+    result = filtered_result()
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    filtered = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, filters=ONE_OWNER)
+
+    for name in ("Owner curve", f"{CARFAX.name} curve"):
+        assert series_named(plain, name) == series_named(filtered, name)
+    assert plain["xAxis"] == filtered["xAxis"] and plain["yAxis"] == filtered["yAxis"]
+
+
+def test_a_faded_outlier_keeps_its_edge_arrow_and_real_values():
+    result = SearchResult(
+        [replace(listing(1, OwnerType.OWNER, 60_000, 95_000), one_owner=False)],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    point = series_named(chart_options(OWNER_ONLY, result, filters=ONE_OWNER), "Owner")["data"][0]
+
+    assert point["symbol"] == "arrow" and point["actual"] == [60_000, 95_000]
+    assert point["itemStyle"]["color"] == FADED_COLOR
+
+
+def test_a_pinned_faded_listing_is_still_ringed():
+    result = filtered_result()
+
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, pinned_id="carfax:3", filters=ONE_OWNER)
+
+    assert options["series"][-1]["data"] == [[40_000, 15_000]]
+
+
+def test_the_status_line_counts_matching_and_faded_listings_only_while_filtering():
+    result = filtered_result()
+
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, ONE_OWNER) == (
+        "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 match filters, 2 faded"
+    )
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result) == "4 listings: 2 owner, 0 dealer, 2 Carfax"
