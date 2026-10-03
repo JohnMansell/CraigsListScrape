@@ -9,12 +9,13 @@ import secrets
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
 from loguru import logger
 from nicegui import app, run, ui
-from nicegui.events import EChartPointClickEventArguments, GenericEventArguments
+from nicegui.events import EChartPointClickEventArguments, GenericEventArguments, KeyEventArguments
 from starlette.requests import Request
 
 from craigslist import lookup
@@ -28,15 +29,39 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
+from craigslist.favorites import (
+    EMPTY_TEXT as NO_FAVORITES_TEXT,
+    FAVORITES_KEY,
+    HIDDEN_EMPTY_TEXT,
+    HIDDEN_KEY,
+    SavedListing,
+    SavedSearch,
+    button_text,
+    favorite_row,
+    hidden_tab_text,
+    move_saved,
+    price_text,
+    read_saved,
+    remove_saved,
+    saved_ids,
+    update_from_search,
+    write_saved,
+)
 from craigslist.filters import Filters, trim_options, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
     detail_lines,
+    hide_label,
+    hide_tooltip,
+    key_action,
+    key_target,
     load_details,
     no_mileage_listings,
     no_mileage_note,
     preview_content,
+    save_label,
+    save_tooltip,
 )
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 from craigslist.sources import SOURCES, choices_text
@@ -54,6 +79,28 @@ FLAG_FILTERS = (("one_owner", "One owner"), ("no_accidents", "No accidents"), ("
 SEARCH_KEYS = ("state", "city", "make", "model")
 FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
+TAB_PICKS_TOP = """(event) => {{
+  const select = getElement({id});
+  if (event.key === "ArrowUp" || event.key === "ArrowDown") {{ select.arrowed = true; return; }}
+  if (event.key !== "Tab") {{ select.arrowed = false; return; }}
+  if (event.shiftKey || select.arrowed) return;  // an arrowed-to option: Quasar picks it
+  const typed = event.target.value?.trim().toLocaleLowerCase();
+  if (!typed) return;
+  const label = (option) => String(option.label).toLocaleLowerCase();
+  const top = select.initialOptions.find((option) => label(option) === typed)
+    ?? select.initialOptions.find((option) => label(option).includes(typed));
+  if (top === undefined) return;
+  const q = select.$refs.qRef;
+  q.setOptionIndex(-1);  // so Quasar's own Tab handling does not pick a stale highlight
+  q.toggleOption(top);
+}}"""
+"""Tab in a select's search box picks the top option matching the typed text, as the
+filtered dropdown lists it, instead of leaving the box empty."""
+POINT_CONTEXT_MENU = """(e) => emit({
+  seriesType: e.seriesType, seriesName: e.seriesName, dataIndex: e.dataIndex,
+  x: e.event?.event?.clientX, y: e.event?.event?.clientY,
+})"""
+"""Forward a right-click on a chart point with where it happened, for the point's menu."""
 DEFAULT_SEARCH = {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
 """What a browser with no link and no remembered Search starts from, so Search is one click."""
 
@@ -178,6 +225,10 @@ def _known(value: str | None, options: list[str]) -> str | None:
     return next((option for option in options if option.casefold() == value.strip().casefold()), None)
 
 
+def _tab_picks_top(select: ui.select) -> ui.select:
+    return select.on("keydown.capture", js_handler=TAB_PICKS_TOP.format(id=select.id))
+
+
 def search_page(request: Request) -> None:
     """Build one Search page for one browser tab.
 
@@ -210,6 +261,12 @@ def search_page(request: Request) -> None:
     """The display filters: they fade points, never refit a curve or refetch."""
     curve_only: frozenset[Source] = frozenset()
     """Sources drawn as their Price curve alone, points hidden."""
+    removed_origins: dict[str, SavedSearch | None] = {}
+    """The Search a favorite or hidden car removed in this tab came from, so saving or hiding
+    it again keeps it."""
+    drawn_hidden: frozenset[str] = frozenset()
+    """The hidden ids the chart was last drawn with, so chart events map back to the right Listing
+    even after another tab hides a car."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -329,7 +386,7 @@ def search_page(request: Request) -> None:
             if hovered is not None:
                 draw_listing(hovered)
             elif list_mode and shown_search is not None and shown_result is not None:
-                draw_no_mileage_list(no_mileage_listings(shown_search, shown_result))
+                draw_no_mileage_list(no_mileage_listings(shown_search, shown_result, hidden_ids()))
             elif pinned is not None:
                 draw_listing(pinned)
             else:
@@ -340,12 +397,23 @@ def search_page(request: Request) -> None:
         if content.image:
             ui.image(content.image).classes("w-full rounded")
         ui.label(content.title).classes("font-bold")
-        ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
+        entry = next((entry for entry in favorites() if entry.listing.id == listing.id), None)
+        price = price_text(listing.price, entry.first_price) if entry is not None else content.price
+        ui.label(f"{price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
         for line in (content.year, content.trim, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
-        ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+        with ui.row().classes("items-center gap-1"):
+            ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+            saved = entry is not None
+            ui.button(save_label(saved), on_click=lambda: favorite_toggled(listing)).props(
+                "unelevated color=amber-8" if saved else "outline color=amber-8"
+            ).tooltip(save_tooltip(saved))
+            is_hidden = listing.id in hidden_ids()
+            ui.button(hide_label(is_hidden), on_click=lambda: hide_toggled(listing)).props(
+                "unelevated color=grey-7" if is_hidden else "outline color=grey-7"
+            ).tooltip(hide_tooltip(is_hidden)).mark("hide-toggle")
         if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
@@ -364,7 +432,8 @@ def search_page(request: Request) -> None:
         """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
         if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
             return None
-        rows = plotted_listings(shown_search, shown_result, filters, curve_only).get(str(args.get("seriesName")))
+        plotted = plotted_listings(shown_search, shown_result, filters, curve_only, drawn_hidden)
+        rows = plotted.get(str(args.get("seriesName")))
         index = args.get("dataIndex")
         if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
             return None
@@ -383,6 +452,31 @@ def search_page(request: Request) -> None:
             hovered = None
             draw_preview()
 
+    def point_right_clicked(event: GenericEventArguments) -> None:
+        """Open the Save and Hide menu at the mouse for a right-clicked point, not for empty space."""
+        listing = point_listing(event.args)
+        if listing is None:
+            return
+        menu_anchor.style(f"left: {event.args.get('x') or 0}px; top: {event.args.get('y') or 0}px")
+        point_menu.clear()
+        with point_menu:
+            ui.menu_item(save_label(listing.id in saved_ids(favorites())), on_click=lambda: favorite_toggled(listing)).mark("menu-save")
+            ui.menu_item(hide_label(listing.id in hidden_ids()), on_click=lambda: hide_toggled(listing)).mark("menu-hide")
+        point_menu.open()
+
+    def key_pressed(event: KeyEventArguments) -> None:
+        """F saves or unsaves, H hides or unhides, the Pinned Listing, else the hovered one."""
+        if not event.action.keydown:
+            return
+        action = key_action(event.key.name, event.modifiers.ctrl, event.modifiers.alt, event.modifiers.meta)
+        listing = key_target(pinned, hovered)
+        if action is None or listing is None:
+            return
+        if action == "save":
+            favorite_toggled(listing)
+        else:
+            hide_toggled(listing)
+
     async def point_clicked(event: EChartPointClickEventArguments) -> None:
         listing = point_listing(
             {"seriesType": event.series_type, "seriesName": event.series_name, "dataIndex": event.data_index}
@@ -390,12 +484,15 @@ def search_page(request: Request) -> None:
         if listing is not None:
             await pin(listing)
 
-    async def pin(listing: Listing) -> None:
-        """Make `listing` the Pinned Listing, ring it, and load its details off the UI thread."""
+    async def pin(listing: Listing, fetch_details: bool = True) -> None:
+        """Make `listing` the Pinned Listing, ring it, and load its details off the UI thread
+        unless `fetch_details` is False."""
         nonlocal pinned, pinned_details, list_mode
-        pinned, pinned_details, list_mode = listing, None, False
+        pinned, pinned_details, list_mode = listing, None if fetch_details else {}, False
         draw_preview()
         redraw_pin()
+        if not fetch_details:
+            return
         try:
             details = await run.io_bound(load_details, listing)
         except Exception as error:  # a failed detail fetch must not break the page
@@ -405,12 +502,151 @@ def search_page(request: Request) -> None:
             pinned_details = details
             draw_preview()
 
+    def draw_chart(search: Search, result: SearchResult) -> None:
+        """Draw the points, curves, gold pins and ring, leaving out the hidden Listings."""
+        nonlocal drawn_hidden
+        drawn_hidden = hidden_ids()
+        chart.options.clear()
+        chart.options.update(chart_options(
+            search, result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites()), drawn_hidden
+        ))
+        chart.update()
+
     def redraw_pin() -> None:
-        """Move the ring to the Pinned Listing without redrawing the points."""
+        """Move the ring to the Pinned Listing and the gold pins to the favorites, without searching."""
         if shown_search is not None and shown_result is not None and chart.visible:
-            chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
-            chart.update()
+            draw_chart(shown_search, shown_result)
+
+    def redraw_hidden() -> None:
+        """Apply a Hide or Unhide to the chart, status line and no-mileage note, without searching."""
+        if current is not None and not running:
+            redraw()
+        else:
+            redraw_pin()
+
+    def favorites() -> list[SavedListing]:
+        """This browser's favorites, newest first, read fresh so every tab agrees."""
+        return read_saved(app.storage.user, FAVORITES_KEY)
+
+    def hidden() -> list[SavedListing]:
+        """This browser's hidden Listings, newest first, read fresh so every tab agrees."""
+        return read_saved(app.storage.user, HIDDEN_KEY)
+
+    def hidden_ids() -> frozenset[str]:
+        return saved_ids(hidden())
+
+    def shown_listing(listing_id: str) -> Listing | None:
+        """The current results' Listing with this id, or None when no shown Search found it."""
+        if shown_result is None:
+            return None
+        return next((listing for listing in shown_result.listings if listing.id == listing_id), None)
+
+    def origin_of(listing: Listing) -> SavedSearch | None:
+        """The Search to save `listing` under: the shown one when it found it, else where it was
+        last removed from in this tab, else None."""
+        if shown_search is not None and shown_listing(listing.id) is not None:
+            return SavedSearch.of(shown_search)
+        return removed_origins.get(listing.id)
+
+    def remove_entry(entries: list[SavedListing], listing: Listing) -> list[SavedListing]:
+        removed_origins.update((entry.listing.id, entry.search) for entry in entries if entry.listing.id == listing.id)
+        return remove_saved(entries, listing.id)
+
+    def favorite_toggled(listing: Listing) -> None:
+        """Save `listing` as a favorite, unhiding it, or remove it when it already is one."""
+        entries, hidden_entries = favorites(), hidden()
+        if listing.id in saved_ids(entries):
+            entries = remove_entry(entries, listing)
+        else:
+            hidden_entries, entries = move_saved(hidden_entries, entries, listing, origin_of(listing), datetime.now(UTC))
+            write_saved(app.storage.user, HIDDEN_KEY, hidden_entries)
+        write_saved(app.storage.user, FAVORITES_KEY, entries)
+        draw_favorites()
+        draw_preview()
+        redraw_hidden()
+
+    def hide_toggled(listing: Listing) -> None:
+        """Hide `listing`, taking it out of the favorites and the pin, or unhide it when hidden."""
+        nonlocal hovered, pinned, pinned_details
+
+        # --- Update The Stored Lists
+        entries, favorite_entries = hidden(), favorites()
+        if listing.id in saved_ids(entries):
+            entries = remove_entry(entries, listing)
+        else:
+            favorite_entries, entries = move_saved(favorite_entries, entries, listing, origin_of(listing), datetime.now(UTC))
+            write_saved(app.storage.user, FAVORITES_KEY, favorite_entries)
+            if hovered is not None and hovered.id == listing.id:
+                hovered = None
+            if pinned is not None and pinned.id == listing.id:
+                pinned = pinned_details = None
+        write_saved(app.storage.user, HIDDEN_KEY, entries)
+
+        # --- Redraw Without A Search
+        draw_favorites()
+        draw_preview()
+        redraw_hidden()
+
+    def update_favorites(search: Search, result: SearchResult) -> None:
+        """Refresh the favorites a finished Search returned and mark the ones it covered but missed."""
+        entries = favorites()
+        updated = update_from_search(entries, search, result, datetime.now(UTC))
+        if updated != entries:
+            write_saved(app.storage.user, FAVORITES_KEY, updated)
+            draw_favorites()
+
+    async def saved_clicked(entry: SavedListing) -> None:
+        """Pin a favorite or hidden car, as the current results' Listing when this Search found it
+        too. Otherwise pin its snapshot without fetching: nothing fetches a saved car's own page."""
+        found = shown_listing(entry.listing.id)
+        if found is not None:
+            await pin(found)
+        else:
+            await pin(entry.listing, fetch_details=False)
+
+    def draw_favorites() -> None:
+        """The toolbar count, the Hidden tab's count, and both tabs' rows, newest first."""
+        entries, hidden_entries = favorites(), hidden()
+        favorites_button.set_text(button_text(len(entries)))
+        hidden_tab.props["label"] = hidden_tab_text(len(hidden_entries))
+        hidden_tab.update()
+
+        # --- Favorites Tab
+        favorites_list.clear()
+        with favorites_list:
+            if not entries:
+                ui.label(NO_FAVORITES_TEXT).classes("text-sm opacity-70")
+            for entry in entries:
+                with draw_saved_row(entry, "saved", "favorite"):
+                    ui.button("✕", on_click=lambda _, listing=entry.listing: favorite_toggled(listing)).props("flat dense size=sm")
+
+        # --- Hidden Tab
+        hidden_list.clear()
+        with hidden_list:
+            if not hidden_entries:
+                ui.label(HIDDEN_EMPTY_TEXT).classes("text-sm opacity-70")
+            for entry in hidden_entries:
+                with draw_saved_row(entry, "hidden", "hidden"):
+                    ui.button("Unhide", on_click=lambda _, listing=entry.listing: hide_toggled(listing)).props(
+                        "flat dense size=sm"
+                    ).mark("unhide")
+
+    def draw_saved_row(entry: SavedListing, verb: str, marker: str) -> ui.row:
+        """One drawer row's photo and text, clicked to pin it. Returns the row, for its button."""
+        row = favorite_row(entry, verb)
+        line = ui.row().classes("w-full no-wrap items-start gap-1")
+        with line:
+            with ui.row().classes("grow min-w-0 no-wrap items-start gap-2 p-1 rounded hover:bg-gray-500/10 cursor-pointer") as item:
+                if row.image:
+                    ui.image(row.image).classes("w-20 h-14 rounded shrink-0")
+                with ui.column().classes("gap-0 grow min-w-0"):
+                    ui.label(row.title).classes("text-sm font-bold truncate w-full")
+                    ui.label(row.price_mileage).classes("text-sm")
+                    ui.label(row.source).classes("text-xs opacity-70")
+                    if row.missing:
+                        ui.label(row.missing).classes("text-xs text-amber-800 dark:text-amber-300")
+            item.mark(marker).on("click", lambda _, entry=entry: saved_clicked(entry))
+        return line
 
     def no_mileage_clicked() -> None:
         nonlocal list_mode
@@ -459,6 +695,7 @@ def search_page(request: Request) -> None:
         if result is None:  # the app is shutting down
             return
         current = (search, result)
+        update_favorites(search, result)
         fill_filter_options(result.listings)
         show(search, result, final=True)
 
@@ -474,7 +711,8 @@ def search_page(request: Request) -> None:
 
     def show(fetched: Search, result: SearchResult, final: bool) -> None:
         """Draw `result`, limited to the fetched Owner types and Sources checked now."""
-        nonlocal shown_search, shown_result
+        nonlocal shown_search, shown_result, drawn_hidden
+        drawn_hidden = hidden_ids()
         wanted = {OwnerType.OWNER: form.owner, OwnerType.DEALER: form.dealer}
         search = replace(
             fetched,
@@ -492,12 +730,10 @@ def search_page(request: Request) -> None:
         if message is not None:
             empty_label.set_text(message)
         elif result.listings:
-            chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only))
-            chart.update()
+            draw_chart(search, result)
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
-        no_mileage = no_mileage_note(len(no_mileage_listings(search, result)))
+        no_mileage = no_mileage_note(len(no_mileage_listings(search, result, drawn_hidden)))
         no_mileage_label.set_visibility(no_mileage is not None)
         no_mileage_label.set_text(no_mileage or "")
         if list_mode:
@@ -511,15 +747,25 @@ def search_page(request: Request) -> None:
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
         if search.owner_types or search.sources:
-            status.set_text(status_text(search, result, filters, curve_only) if final else progress_text(len(result.listings)))
+            line = status_text(search, result, filters, curve_only, drawn_hidden) if final else progress_text(len(result.listings))
+            status.set_text(line)
 
+    with ui.right_drawer(value=False, bordered=True).classes("p-2").props("width=340") as drawer:
+        with ui.tabs().classes("w-full") as drawer_tabs:
+            favorites_tab = ui.tab("favorites", "Favorites")
+            hidden_tab = ui.tab("hidden", hidden_tab_text(0))
+        with ui.tab_panels(drawer_tabs, value=favorites_tab, animated=False).classes("w-full"):
+            with ui.tab_panel(favorites_tab).classes("p-0"):
+                favorites_list = ui.column().classes("w-full gap-1")
+            with ui.tab_panel(hidden_tab).classes("p-0"):
+                hidden_list = ui.column().classes("w-full gap-1")
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
         with ui.row().classes("w-full items-center gap-3"):
-            ui.select(lookup.states(), value=form.state, label="State", with_input=True, on_change=lambda e: state_changed(e.value)).classes("w-24")
-            city_select = ui.select(form.city_options(), value=form.city, label="City", with_input=True, on_change=lambda e: city_changed(e.value)).classes("w-56")
-            ui.select(lookup.makes(), value=form.make, label="Make", with_input=True, on_change=lambda e: make_changed(e.value)).classes("w-44")
-            model_select = ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value)).classes("w-44")
+            _tab_picks_top(ui.select(lookup.states(), value=form.state, label="State", with_input=True, on_change=lambda e: state_changed(e.value))).classes("w-24")
+            city_select = _tab_picks_top(ui.select(form.city_options(), value=form.city, label="City", with_input=True, on_change=lambda e: city_changed(e.value))).classes("w-56")
+            _tab_picks_top(ui.select(lookup.makes(), value=form.make, label="Make", with_input=True, on_change=lambda e: make_changed(e.value))).classes("w-44")
+            model_select = _tab_picks_top(ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value))).classes("w-44")
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
             for source, info in SOURCES.items():
@@ -528,6 +774,8 @@ def search_page(request: Request) -> None:
                     ui.switch("curve only", on_change=lambda e, source=source: curve_only_changed(source, e.value)).props("dense size=xs").classes("text-xs opacity-70")
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
+            ui.space()
+            favorites_button = ui.button(on_click=drawer.toggle).props("flat color=amber-9")
         with ui.row().classes("w-full items-center gap-4"):
             for name, label in FLAG_FILTERS:
                 with ui.row().classes("items-center gap-0 no-wrap"):
@@ -558,7 +806,14 @@ def search_page(request: Request) -> None:
         status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
     chart.on("chart:mouseover", point_hovered, ["seriesType", "seriesName", "dataIndex"])
     chart.on("chart:globalout", hover_ended, [])
+    chart.on("chart:contextmenu", point_right_clicked, js_handler=POINT_CONTEXT_MENU)
+    chart.on("contextmenu.prevent", js_handler="() => {}")  # no browser menu over the chart
+    with ui.element().style("position: fixed; left: 0px; top: 0px") as menu_anchor:
+        point_menu = ui.menu().props("no-parent-event")
+    # Hotkeys stay off while typing; unlike NiceGUI's default, a focused button (Save just clicked) allows them.
+    ui.keyboard(on_key=key_pressed, repeating=False, ignore=["input", "select", "textarea"])
     draw_preview()
+    draw_favorites()
     timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
     refresh_search_button()
     if from_link and form.problem() is None:

@@ -36,6 +36,9 @@ class SourceResults(Protocol):
     @property
     def cancelled(self) -> bool: ...
 
+    @property
+    def complete(self) -> bool: ...
+
 
 class SourceFetcher(Protocol):
     """A live `Fetch` that holds a connection and is closed after the Search."""

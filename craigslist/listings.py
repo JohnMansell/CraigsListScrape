@@ -131,6 +131,9 @@ class SearchResults:
     arrived before it."""
     cancelled: bool = False
     """True when `should_stop` ended the search early. `listings` holds what arrived."""
+    complete: bool = True
+    """False when an owner type's paging stopped at `MAX_BATCH_REQUESTS` with no error, so a
+    car it would have found may be missing from `listings`."""
 
 
 def _image_url(code: str, size: str = "600x450") -> str:
@@ -196,6 +199,7 @@ def search_listings(
     requests = 0
     error: ListingSourceError | None = None
     cancelled = False
+    complete = True
 
     def counted_fetch(url: str) -> str:
         nonlocal requests
@@ -213,14 +217,14 @@ def search_listings(
 
     try:
         for owner_type in search.owner_types:
-            _search_owner_type(search, owner_type, counted_fetch, totals, emit)
+            complete = _search_owner_type(search, owner_type, counted_fetch, totals, emit) and complete
     except _Stopped:
         cancelled = True
         logger.info("{}: cancelled after {} requests with {} Listings", API_NAME, requests, len(listings))
     except ListingSourceError as failure:
         error = failure
         logger.warning("{}: failed after {} requests with {} Listings: {}", API_NAME, requests, len(listings), failure)
-    return SearchResults(listings, totals, requests, error, cancelled)
+    return SearchResults(listings, totals, requests, error, cancelled, complete)
 
 
 def _search_owner_type(
@@ -229,13 +233,15 @@ def _search_owner_type(
     fetch: Fetch,
     totals: dict[OwnerType, int],
     emit: Callable[[list[Listing]], None],
-) -> None:
+) -> bool:
+    """Page one owner type's results into `emit`. Returns False when it stopped at `MAX_BATCH_REQUESTS`."""
     page = parse_full(fetch(full_url(search, owner_type)), owner_type)
     totals[owner_type] = page.reported_total
     results = {listing.id: listing for listing in page.listings}
     emit(list(results.values()))
     results_seen = page.result_count
     """How far into the results paging got, counting results skipped while parsing."""
+    complete = True
 
     cache = None
     if page.result_count >= FULL_PAGE_SIZE:
@@ -260,11 +266,13 @@ def _search_owner_type(
                 "{} {}: stopped after {} batch requests, there may be more results",
                 API_NAME, owner_type, MAX_BATCH_REQUESTS,
             )
+            complete = False
 
     if results_seen != page.reported_total:
         # Normal for dealer searches: the total leaves out results syndicated from other areas.
         logger.debug("{} {}: got {} results, API reported {}", API_NAME, owner_type, results_seen, page.reported_total)
     logger.info("{} {}: {} Listings", API_NAME, owner_type, len(results))
+    return complete
 
 
 # URLs

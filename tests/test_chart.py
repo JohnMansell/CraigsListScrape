@@ -5,6 +5,8 @@ from craigslist.chart import (
     DEALER_COLOR,
     FADED_COLOR,
     FADED_SIZE,
+    FAVORITE_COLOR,
+    FAVORITES_NAME,
     OWNER_COLOR,
     chart_options,
     curve_notes,
@@ -95,7 +97,7 @@ def test_owner_types_not_searched_and_unfitted_curves_are_not_drawn():
 
     options = chart_options(Search("CA", "Orange County", "Honda", "Civic", (OwnerType.OWNER,), sources=()), result)
 
-    assert [series["name"] for series in options["series"]] == ["Owner", "Pinned listing"]
+    assert [series["name"] for series in options["series"]] == ["Owner", "Favorites", "Pinned listing"]
 
 
 def test_zero_results_give_a_message_naming_the_search():
@@ -624,3 +626,141 @@ def test_curve_only_points_are_left_out_of_the_match_counts():
     text = status_text(CARFAX_SEARCH_WITH_OWNERS, result, ONE_OWNER, curve_only=frozenset({Source.CARFAX}))
 
     assert text.endswith("1 match filters, 1 faded")
+
+
+# Favorite pins
+
+
+def favorite_pins(options: dict) -> dict:
+    return series_named(options, FAVORITES_NAME)
+
+
+def test_each_favorite_in_the_results_gets_a_silent_gold_pin_outside_the_legend():
+    result = filtered_result()
+
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, favorite_ids={"1", "carfax:4"})
+
+    pins = favorite_pins(options)
+    assert sorted(pins["data"]) == [[50_000, 12_000], [70_000, 9_000]]
+    assert pins["type"] == "scatter" and pins["symbol"] == "pin" and pins["silent"] is True
+    assert pins["itemStyle"]["color"] == FAVORITE_COLOR == "#f5b301"
+    assert FAVORITES_NAME not in options["legend"]["data"]
+
+
+def test_favorite_pins_are_always_present_and_the_pin_ring_stays_last():
+    result = filtered_result()
+
+    marked = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, pinned_id="1", favorite_ids={"1"})
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, pinned_id="1")
+
+    assert favorite_pins(plain)["data"] == []
+    assert len(marked["series"]) == len(plain["series"])
+    assert marked["series"][-1]["data"] == [[50_000, 12_000]]
+
+
+def test_favorites_outside_the_results_or_without_mileage_get_no_pin():
+    result = SearchResult([listing(1, OwnerType.OWNER, 50_000), listing(2, OwnerType.OWNER, None)], {}, {})
+
+    options = chart_options(SEARCH, result, favorite_ids={"2", "carfax:99", "craigslist:other-search"})
+
+    assert favorite_pins(options)["data"] == []
+
+
+def test_a_favorite_of_an_owner_type_not_shown_gets_no_pin():
+    result = SearchResult([listing(1, OwnerType.DEALER, 50_000)], {}, {})
+
+    assert favorite_pins(chart_options(OWNER_ONLY, result, favorite_ids={"1"}))["data"] == []
+
+
+def test_a_favorite_faded_by_a_display_filter_gets_no_pin():
+    result = filtered_result()
+
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, filters=ONE_OWNER, favorite_ids={"1", "2", "carfax:3", "carfax:4"})
+
+    assert sorted(favorite_pins(options)["data"]) == [[50_000, 12_000], [70_000, 9_000]]
+
+
+def test_a_favorite_hidden_by_curve_only_gets_no_pin():
+    result = filtered_result()
+
+    options = chart_options(
+        CARFAX_SEARCH_WITH_OWNERS, result, curve_only=frozenset({Source.CARFAX}), favorite_ids={"2", "carfax:4"}
+    )
+
+    assert favorite_pins(options)["data"] == [[60_000, 11_000]]
+
+
+def test_a_favorite_outlier_is_pinned_on_its_edge_arrow():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 50_000, 12_000), listing(2, OwnerType.OWNER, 60_000, 95_000)],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    options = chart_options(OWNER_ONLY, result, favorite_ids={"2"})
+
+    arrow = series_named(options, "Owner")["data"][1]
+    assert favorite_pins(options)["data"] == [arrow["value"]] == [[60_000, 20_600]]
+
+
+# Hidden Listings
+
+
+def test_a_hidden_listing_is_not_drawn_while_curves_and_default_axes_are_unchanged():
+    result = filtered_result()
+    hidden = frozenset({"1", "carfax:3"})
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids=hidden)
+
+    assert series_named(options, "Owner")["data"] == [[60_000, 11_000]]
+    assert series_named(options, CARFAX.name)["data"] == [[70_000, 9_000]]
+    for name in ("Owner curve", f"{CARFAX.name} curve"):
+        assert series_named(plain, name) == series_named(options, name)
+    assert plain["xAxis"] == options["xAxis"] and plain["yAxis"] == options["yAxis"]
+    assert plain["legend"] == options["legend"] and len(plain["series"]) == len(options["series"])
+
+
+def test_hidden_listings_are_left_out_of_the_series_index_mapping():
+    plotted = plotted_listings(CARFAX_SEARCH_WITH_OWNERS, filtered_result(), ONE_OWNER, hidden_ids={"2", "carfax:4"})
+
+    assert [item.id for item in plotted["Owner"]] == ["1"]
+    assert [item.id for item in plotted[CARFAX.name]] == ["carfax:3"]
+
+
+def test_a_hidden_outlier_draws_no_edge_arrow():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 50_000, 12_000), listing(2, OwnerType.OWNER, 60_000, 95_000)],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    options = chart_options(OWNER_ONLY, result, hidden_ids={"2"})
+
+    assert series_named(options, "Owner")["data"] == [[50_000, 12_000]]
+
+
+def test_a_hidden_listing_gets_no_ring_and_no_gold_pin():
+    options = chart_options(
+        CARFAX_SEARCH_WITH_OWNERS, filtered_result(), pinned_id="1", favorite_ids={"1"}, hidden_ids={"1"}
+    )
+
+    assert favorite_pins(options)["data"] == []
+    assert options["series"][-1]["data"] == []
+
+
+def test_the_status_line_counts_hidden_listings_in_the_results():
+    result = filtered_result()
+
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids={"1", "carfax:3", "carmax:elsewhere"}) == (
+        "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 hidden"
+    )
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids={"carmax:elsewhere"}) == (
+        "4 listings: 2 owner, 0 dealer, 2 Carfax"
+    )
+
+
+def test_hidden_listings_are_left_out_of_the_match_counts():
+    text = status_text(CARFAX_SEARCH_WITH_OWNERS, filtered_result(), ONE_OWNER, hidden_ids={"1", "2"})
+
+    assert text == "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 hidden. Points on the chart: 1 match filters, 1 faded"

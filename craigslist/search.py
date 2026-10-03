@@ -51,6 +51,9 @@ class SearchResult:
     the other way around: one Source failing keeps the others' Listings."""
     cancelled: bool = False
     """The Search was stopped early. `listings` holds what arrived before that."""
+    incomplete_sources: frozenset[Source] = frozenset()
+    """Sources (`Source.CRAIGSLIST` included) that skipped their search or stopped at a page
+    cap without an error, so a car they would have found may be missing."""
 
 
 def run_search(
@@ -104,6 +107,7 @@ def _run(
     error: ListingSourceError | None = None
     cancelled = False
     reported_totals: dict[OwnerType, int] = {}
+    incomplete: set[Source] = set()
     if search.owner_types:
         listing_search = ListingSearch(city, search.make, search.model, search.owner_types)
         source_result = search_listings(listing_search, fetch, on_batch, should_stop)
@@ -112,6 +116,8 @@ def _run(
         error = source_result.error
         cancelled = source_result.cancelled
         reported_totals = source_result.reported_totals
+        if not source_result.complete:
+            incomplete.add(Source.CRAIGSLIST)
 
     # --- Other Sources
     by_source: dict[Source, list[Listing]] = {}
@@ -128,6 +134,8 @@ def _run(
         source_totals[source] = found.reported_total
         if found.error is not None:
             source_errors[source] = found.error
+        if not found.complete:
+            incomplete.add(source)
 
     # --- Price Curves
     curves = {
@@ -143,7 +151,8 @@ def _run(
         for source, found in by_source.items()
     }
     return SearchResult(
-        listings, curves, reported_totals, source_curves, source_totals, requests, error, source_errors, cancelled
+        listings, curves, reported_totals, source_curves, source_totals, requests, error, source_errors, cancelled,
+        frozenset(incomplete),
     )
 
 

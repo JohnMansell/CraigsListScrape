@@ -347,10 +347,15 @@ def test_paging_stops_at_the_batch_request_limit(small_pages, monkeypatch, log_m
     monkeypatch.setattr(listings, "MAX_BATCH_REQUESTS", 1)
     fetch = paged_owner_fetcher()
 
-    search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch)
+    results = search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), fetch)
 
     assert sum(urlsplit(url).path.endswith("/batch") for url in fetch.urls) == 1
     assert any("stopped after 1 batch requests" in message for message in log_messages)
+    assert not results.complete
+
+
+def test_a_search_paged_to_its_end_is_complete(small_pages):
+    assert search_listings(Search(ORANGE_COUNTY, owner_types=(OwnerType.OWNER,)), paged_owner_fetcher()).complete
 
 
 # Streaming, failure and cancelling
