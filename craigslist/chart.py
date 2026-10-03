@@ -25,6 +25,10 @@ ARROW_SIZE = 14
 PIN_COLOR = "#d62728"
 PIN_SIZE = 24
 PIN_NAME = "Pinned listing"
+FAVORITE_COLOR = "#f5b301"
+FAVORITE_BORDER = "#7a5900"
+FAVORITE_SIZE = 26
+FAVORITES_NAME = "Favorites"
 FADED_COLOR = "#c8c8c8"
 """A Listing failing a display filter: light grey, the same for every Source and Owner type."""
 FADED_SIZE = 7
@@ -49,6 +53,7 @@ def chart_options(
     pinned_id: str | None = None,
     filters: Filters = Filters(),
     curve_only: Collection[Source] = frozenset(),
+    favorite_ids: Collection[str] = frozenset(),
 ) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
@@ -58,7 +63,8 @@ def chart_options(
     A Source in `curve_only` keeps an empty points series, so its legend entry stays beside
     its curve. Dragging on the chart zooms, and the toolbox restores the default view. The
     Pinned Listing, when it is on the chart, is ringed by a last series that is always present
-    (empty when nothing is pinned), so pinning never changes the series count.
+    (empty when nothing is pinned), so pinning never changes the series count. Before it, a
+    gold pin marks each drawn, unfaded point whose id is in `favorite_ids`; also always present.
     """
     view = default_range(search, result)
     plotted = plotted_listings(search, result, filters, curve_only)
@@ -76,6 +82,7 @@ def chart_options(
         if isinstance(source_curve, PriceCurve):
             series.append(_source_curve(source, source_curve))
     legend = [str(item["name"]) for item in series]
+    series.append(_favorite_pins(plotted, view, filters, favorite_ids))
     series.append(_pin_ring(plotted, view, pinned_id))
     return {
         "animation": False,
@@ -249,6 +256,13 @@ def _edge_point(miles: float, price: float, view: ChartRange) -> dict[str, Any] 
     }
 
 
+def _drawn_at(listing: Listing, view: ChartRange | None) -> list[float]:
+    """Where `listing`'s point is drawn: its own place, or its arrow's place at the edge."""
+    assert listing.mileage is not None
+    edge = view and _edge_point(listing.mileage, listing.price, view)
+    return edge["value"] if edge else [listing.mileage, listing.price]
+
+
 def _point(listing: Listing, view: ChartRange | None, filters: Filters) -> list[int] | dict[str, Any]:
     """One data item: the point, an arrow at the edge for an outlier, and faded when it
     fails `filters` (an arrow stays an arrow)."""
@@ -299,12 +313,7 @@ def _source_points(source: Source, listings: list[Listing], view: ChartRange | N
 
 def _pin_ring(plotted: dict[str, list[Listing]], view: ChartRange | None, pinned_id: str | None) -> dict[str, Any]:
     """A hollow ring around the Pinned Listing's point, or no data when it is not plotted."""
-    data: list[list[float]] = []
-    for listings in plotted.values():
-        for listing in listings:
-            if listing.id == pinned_id and listing.mileage is not None:
-                edge = view and _edge_point(listing.mileage, listing.price, view)
-                data.append(edge["value"] if edge else [listing.mileage, listing.price])
+    data = [_drawn_at(listing, view) for listings in plotted.values() for listing in listings if listing.id == pinned_id]
     return {
         "name": PIN_NAME,
         "type": "scatter",
@@ -313,6 +322,30 @@ def _pin_ring(plotted: dict[str, list[Listing]], view: ChartRange | None, pinned
         "symbol": "circle",
         "symbolSize": PIN_SIZE,
         "itemStyle": {"color": "transparent", "borderColor": PIN_COLOR, "borderWidth": 2.5},
+        "data": data,
+    }
+
+
+def _favorite_pins(
+    plotted: dict[str, list[Listing]], view: ChartRange | None, filters: Filters, favorite_ids: Collection[str]
+) -> dict[str, Any]:
+    """A gold pin over each favorite's point, its tip on the point. None for a faded point, and
+    none for one not drawn. Silent, so hover and click reach the point beneath."""
+    data = [
+        _drawn_at(listing, view)
+        for listings in plotted.values()
+        for listing in listings
+        if listing.id in favorite_ids and filters.passes(listing)
+    ]
+    return {
+        "name": FAVORITES_NAME,
+        "type": "scatter",
+        "silent": True,
+        "z": 9,
+        "symbol": "pin",
+        "symbolSize": FAVORITE_SIZE,
+        "symbolOffset": [0, "-50%"],
+        "itemStyle": {"color": FAVORITE_COLOR, "borderColor": FAVORITE_BORDER, "borderWidth": 1},
         "data": data,
     }
 

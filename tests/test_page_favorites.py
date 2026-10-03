@@ -7,6 +7,7 @@ from nicegui.storage import Storage
 from nicegui.testing import user_simulation
 
 from craigslist import page
+from craigslist.chart import FAVORITES_NAME
 from craigslist.curve import NotEnoughData
 from craigslist.favorites import EMPTY_TEXT, FAVORITES_KEY
 from craigslist.listings import Listing, OwnerType, Source
@@ -25,6 +26,10 @@ CARMAX_CAR = Listing(
 )
 
 
+def favorite_pins(chart: ui.echart) -> list:
+    return next(series["data"] for series in chart.options["series"] if series["name"] == FAVORITES_NAME)
+
+
 def fake_search(search: Search, fetch=None, on_batch=None, should_stop=None) -> SearchResult:
     few = NotEnoughData("too few points")
     return SearchResult(
@@ -36,7 +41,7 @@ def fake_search(search: Search, fetch=None, on_batch=None, should_stop=None) -> 
     )
 
 
-async def save_open_and_remove_a_favorite() -> None:
+async def save_open_and_remove_a_favorite(searches: list[Search]) -> None:
     async with user_simulation(root=page.search_page) as user:
         # --- Search and Save
         await user.open(LINK)
@@ -58,6 +63,17 @@ async def save_open_and_remove_a_favorite() -> None:
         assert stored[0]["search"] == {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
         await user.should_not_see(EMPTY_TEXT)
 
+        # --- Pins Follow Save And Remove Without A Search
+        chart = user.find(ui.echart).elements.pop()
+        assert favorite_pins(chart) == [[41_000, 19_998]]
+        user.find(kind=ui.button, content="★ Saved").click()
+        await user.should_see("★ Favorites (0)")
+        assert favorite_pins(chart) == []
+        user.find(kind=ui.button, content="☆ Save").click()
+        await user.should_see("★ Favorites (1)")
+        assert favorite_pins(chart) == [[41_000, 19_998]]
+        assert len(searches) == 1
+
         # --- Reload Without A Search, Pin From The Drawer
         await user.open("/")
         await user.should_see("★ Favorites (1)")
@@ -77,7 +93,13 @@ async def save_open_and_remove_a_favorite() -> None:
 def test_a_favorite_is_saved_kept_over_a_reload_pinned_and_removed(tmp_path, monkeypatch):
     # NiceGUI's reset deletes every storage file under Storage.path, so point it at a scratch dir.
     monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
-    monkeypatch.setattr(page, "run_live_search", fake_search)
+    searches: list[Search] = []
+
+    def counted_search(search: Search, *args) -> SearchResult:
+        searches.append(search)
+        return fake_search(search, *args)
+
+    monkeypatch.setattr(page, "run_live_search", counted_search)
     monkeypatch.setattr(page, "load_details", lambda listing: {})
 
-    asyncio.run(save_open_and_remove_a_favorite())
+    asyncio.run(save_open_and_remove_a_favorite(searches))

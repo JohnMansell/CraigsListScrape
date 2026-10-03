@@ -449,10 +449,12 @@ def search_page(request: Request) -> None:
             draw_preview()
 
     def redraw_pin() -> None:
-        """Move the ring to the Pinned Listing without redrawing the points."""
+        """Move the ring to the Pinned Listing and the gold pins to the favorites, without searching."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
+            chart.options.update(chart_options(
+                shown_search, shown_result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites())
+            ))
             chart.update()
 
     def favorites() -> list[SavedListing]:
@@ -478,6 +480,7 @@ def search_page(request: Request) -> None:
         write_saved(app.storage.user, FAVORITES_KEY, entries)
         draw_favorites()
         draw_preview()
+        redraw_pin()
 
     async def favorite_clicked(entry: SavedListing) -> None:
         """Pin a favorite, as the current results' Listing when this Search found it too."""
@@ -586,7 +589,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites())))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
