@@ -55,8 +55,9 @@ def chart_options(
     Listings without mileage are left off. The axes fit the points the curves kept, so a
     price outlier does not squash the rest; points outside are drawn as arrows at the edge.
     A Listing failing `filters` is a small light-grey dot; curves and axes ignore `filters`.
-    A Source in `curve_only` has no points series, only its curve. Dragging on the chart zooms, and the toolbox restores the default view. The Pinned
-    Listing, when it is on the chart, is ringed by a last series that is always present
+    A Source in `curve_only` keeps an empty points series, so its legend entry stays beside
+    its curve. Dragging on the chart zooms, and the toolbox restores the default view. The
+    Pinned Listing, when it is on the chart, is ringed by a last series that is always present
     (empty when nothing is pinned), so pinning never changes the series count.
     """
     view = default_range(search, result)
@@ -65,8 +66,7 @@ def chart_options(
     for owner_type in search.owner_types:
         series.append(_points(owner_type, plotted[NAMES[owner_type]], view, filters))
     for source in search.sources:
-        if source not in curve_only:
-            series.append(_source_points(source, plotted[SOURCES[source].name], view, filters))
+        series.append(_source_points(source, plotted[SOURCES[source].name], view, filters))
     for owner_type in search.owner_types:
         curve = result.curves.get(owner_type)
         if isinstance(curve, PriceCurve):
@@ -97,7 +97,7 @@ def plotted_listings(
 
     A chart event gives a series name and a data index; this maps them back to a Listing.
     Listings failing `filters` come first in each series, so the full points draw over them.
-    A Source in `curve_only` draws no points, so it has no entry.
+    A Source in `curve_only` draws no points, so its list is empty.
     """
     mapping = {
         NAMES[owner_type]: [
@@ -108,8 +108,7 @@ def plotted_listings(
         for owner_type in search.owner_types
     }
     for source in search.sources:
-        if source not in curve_only:
-            mapping[SOURCES[source].name] = _plottable(source, result)
+        mapping[SOURCES[source].name] = [] if source in curve_only else _plottable(source, result)
     return {name: sorted(listings, key=filters.passes) for name, listings in mapping.items()}
 
 
@@ -198,7 +197,7 @@ def status_text(
     if filters.active():
         points = [listing for listings in plotted_listings(search, result, curve_only=curve_only).values() for listing in listings]
         matched, faded = match_counts(points, filters)
-        text += f". {matched} match filters, {faded} faded"
+        text += f". Points on the chart: {matched} match filters, {faded} faded"
     return f"Cancelled. {text}" if result.cancelled else text
 
 

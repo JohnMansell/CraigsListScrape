@@ -541,7 +541,7 @@ def test_the_status_line_counts_matching_and_faded_listings_only_while_filtering
     result = filtered_result()
 
     assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, ONE_OWNER) == (
-        "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 match filters, 2 faded"
+        "4 listings: 2 owner, 0 dealer, 2 Carfax. Points on the chart: 2 match filters, 2 faded"
     )
     assert status_text(CARFAX_SEARCH_WITH_OWNERS, result) == "4 listings: 2 owner, 0 dealer, 2 Carfax"
 
@@ -586,13 +586,14 @@ def test_curve_only_hides_a_sources_points_and_keeps_its_curve_and_legend_entry(
     plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
     options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, pinned_id="carfax:3", curve_only=hidden)
 
-    assert all(series["name"] != CARFAX.name for series in options["series"])
+    assert series_named(options, CARFAX.name)["data"] == []
+    assert CARFAX.name in options["legend"]["data"]
     assert series_named(options, f"{CARFAX.name} curve") == series_named(plain, f"{CARFAX.name} curve")
     assert f"{CARFAX.name} curve" in options["legend"]["data"]
     assert series_named(options, "Owner") == series_named(plain, "Owner")
     assert options["xAxis"] == plain["xAxis"] and options["yAxis"] == plain["yAxis"]
     assert options["series"][-1]["data"] == []  # a hidden point gets no ring
-    assert CARFAX.name not in plotted_listings(CARFAX_SEARCH_WITH_OWNERS, result, curve_only=hidden)
+    assert plotted_listings(CARFAX_SEARCH_WITH_OWNERS, result, curve_only=hidden)[CARFAX.name] == []
 
 
 def test_curve_only_hides_edge_arrows_too():
@@ -611,9 +612,10 @@ def test_curve_only_works_for_every_source():
 
     for source in SOURCES:
         options = chart_options(CARMAX_SEARCH, result, curve_only=frozenset({source}))
-        shown = {series["name"] for series in options["series"]}
-        assert SOURCES[source].name not in shown
-        assert {info.name for other, info in SOURCES.items() if other != source} <= shown
+        drawn = {series["name"] for series in options["series"] if series["data"]}
+        assert SOURCES[source].name not in drawn
+        assert {info.name for other, info in SOURCES.items() if other != source} <= drawn
+        assert SOURCES[source].name in options["legend"]["data"]
 
 
 def test_curve_only_points_are_left_out_of_the_match_counts():
