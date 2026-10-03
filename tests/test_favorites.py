@@ -7,13 +7,17 @@ import pytest
 from craigslist.favorites import (
     EMPTY_TEXT,
     FAVORITES_KEY,
+    HIDDEN_EMPTY_TEXT,
+    HIDDEN_KEY,
     SavedListing,
     SavedSearch,
     add_saved,
     button_text,
     favorite_row,
+    hidden_tab_text,
     listing_from_json,
     listing_to_json,
+    move_saved,
     price_text,
     read_saved,
     remove_saved,
@@ -271,3 +275,54 @@ def test_a_drawer_row_shows_the_price_change_and_the_missing_mark():
     assert row.price_mileage == "$17,500, was $19,998 when saved  |  41,000 mi"
     assert row.missing == f"Not in latest Search ({LATER.astimezone():%Y-%m-%d})"
     assert favorite_row(saved(CARMAX)).missing is None
+
+
+# --- Hidden Listings
+
+
+def test_hidden_listings_are_kept_under_their_own_key_in_the_same_json():
+    storage: dict = {}
+
+    write_saved(storage, HIDDEN_KEY, [saved(CARMAX)])
+
+    assert HIDDEN_KEY != FAVORITES_KEY and FAVORITES_KEY not in storage
+    assert read_saved(storage, HIDDEN_KEY) == [saved(CARMAX)]
+    assert storage[HIDDEN_KEY] == [saved_to_json(saved(CARMAX))]
+
+
+def test_hiding_a_favorite_removes_it_from_favorites_and_keeps_its_origin():
+    favorites = [saved(CARMAX), saved(CARFAX)]
+
+    favorites, hidden = move_saved(favorites, [], CARMAX, None, LATER)
+
+    assert saved_ids(favorites) == {CARFAX.id}
+    assert hidden == [SavedListing(CARMAX, ORIGIN, LATER)]
+
+
+def test_saving_a_hidden_car_unhides_it_and_the_given_origin_wins():
+    elsewhere = SavedSearch("CA", "Orange County", "Honda", "Civic")
+    hidden = [saved(CRAIGSLIST), saved(CARMAX)]
+
+    hidden, favorites = move_saved(hidden, [saved(CARFAX)], CRAIGSLIST, elsewhere, LATER)
+
+    assert saved_ids(hidden) == {CARMAX.id}
+    assert favorites[0] == SavedListing(CRAIGSLIST, elsewhere, LATER)
+    assert saved_ids(favorites) == {CRAIGSLIST.id, CARFAX.id}
+
+
+def test_a_car_is_never_both_a_favorite_and_hidden():
+    favorites: list[SavedListing] = []
+    hidden: list[SavedListing] = []
+    for step in range(6):
+        if step % 2:
+            favorites, hidden = move_saved(favorites, hidden, CARMAX, ORIGIN, SAVED)
+        else:
+            hidden, favorites = move_saved(hidden, favorites, CARMAX, ORIGIN, SAVED)
+        assert not saved_ids(favorites) & saved_ids(hidden)
+        assert saved_ids(favorites) | saved_ids(hidden) == {CARMAX.id}
+
+
+def test_a_hidden_row_says_when_it_was_hidden_and_the_tab_counts_them():
+    assert favorite_row(saved(CARMAX), "hidden").source.startswith("CarMax  ·  hidden ")
+    assert hidden_tab_text(0) == "Hidden (0)" and hidden_tab_text(3) == "Hidden (3)"
+    assert "Hide" in HIDDEN_EMPTY_TEXT

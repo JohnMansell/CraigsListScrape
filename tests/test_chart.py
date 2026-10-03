@@ -701,3 +701,66 @@ def test_a_favorite_outlier_is_pinned_on_its_edge_arrow():
 
     arrow = series_named(options, "Owner")["data"][1]
     assert favorite_pins(options)["data"] == [arrow["value"]] == [[60_000, 20_600]]
+
+
+# Hidden Listings
+
+
+def test_a_hidden_listing_is_not_drawn_while_curves_and_default_axes_are_unchanged():
+    result = filtered_result()
+    hidden = frozenset({"1", "carfax:3"})
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids=hidden)
+
+    assert series_named(options, "Owner")["data"] == [[60_000, 11_000]]
+    assert series_named(options, CARFAX.name)["data"] == [[70_000, 9_000]]
+    for name in ("Owner curve", f"{CARFAX.name} curve"):
+        assert series_named(plain, name) == series_named(options, name)
+    assert plain["xAxis"] == options["xAxis"] and plain["yAxis"] == options["yAxis"]
+    assert plain["legend"] == options["legend"] and len(plain["series"]) == len(options["series"])
+
+
+def test_hidden_listings_are_left_out_of_the_series_index_mapping():
+    plotted = plotted_listings(CARFAX_SEARCH_WITH_OWNERS, filtered_result(), ONE_OWNER, hidden_ids={"2", "carfax:4"})
+
+    assert [item.id for item in plotted["Owner"]] == ["1"]
+    assert [item.id for item in plotted[CARFAX.name]] == ["carfax:3"]
+
+
+def test_a_hidden_outlier_draws_no_edge_arrow():
+    result = SearchResult(
+        [listing(1, OwnerType.OWNER, 50_000, 12_000), listing(2, OwnerType.OWNER, 60_000, 95_000)],
+        {OwnerType.OWNER: curve((10_000, 20_000), (110_000, 8_000))},
+        {},
+    )
+
+    options = chart_options(OWNER_ONLY, result, hidden_ids={"2"})
+
+    assert series_named(options, "Owner")["data"] == [[50_000, 12_000]]
+
+
+def test_a_hidden_listing_gets_no_ring_and_no_gold_pin():
+    options = chart_options(
+        CARFAX_SEARCH_WITH_OWNERS, filtered_result(), pinned_id="1", favorite_ids={"1"}, hidden_ids={"1"}
+    )
+
+    assert favorite_pins(options)["data"] == []
+    assert options["series"][-1]["data"] == []
+
+
+def test_the_status_line_counts_hidden_listings_in_the_results():
+    result = filtered_result()
+
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids={"1", "carfax:3", "carmax:elsewhere"}) == (
+        "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 hidden"
+    )
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, hidden_ids={"carmax:elsewhere"}) == (
+        "4 listings: 2 owner, 0 dealer, 2 Carfax"
+    )
+
+
+def test_hidden_listings_are_left_out_of_the_match_counts():
+    text = status_text(CARFAX_SEARCH_WITH_OWNERS, filtered_result(), ONE_OWNER, hidden_ids={"1", "2"})
+
+    assert text == "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 hidden. Points on the chart: 1 match filters, 1 faded"

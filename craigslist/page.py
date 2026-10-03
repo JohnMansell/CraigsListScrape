@@ -32,11 +32,14 @@ from craigslist.chart import (
 from craigslist.favorites import (
     EMPTY_TEXT as NO_FAVORITES_TEXT,
     FAVORITES_KEY,
+    HIDDEN_EMPTY_TEXT,
+    HIDDEN_KEY,
     SavedListing,
     SavedSearch,
-    add_saved,
     button_text,
     favorite_row,
+    hidden_tab_text,
+    move_saved,
     price_text,
     read_saved,
     remove_saved,
@@ -49,6 +52,7 @@ from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
     detail_lines,
+    hide_label,
     load_details,
     no_mileage_listings,
     no_mileage_note,
@@ -249,7 +253,11 @@ def search_page(request: Request) -> None:
     curve_only: frozenset[Source] = frozenset()
     """Sources drawn as their Price curve alone, points hidden."""
     removed_origins: dict[str, SavedSearch | None] = {}
-    """The Search a favorite removed in this tab came from, so saving it again keeps it."""
+    """The Search a favorite or hidden car removed in this tab came from, so saving or hiding
+    it again keeps it."""
+    drawn_hidden: frozenset[str] = frozenset()
+    """The hidden ids the chart was last drawn with, so chart events map back to the right Listing
+    even after another tab hides a car."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -369,7 +377,7 @@ def search_page(request: Request) -> None:
             if hovered is not None:
                 draw_listing(hovered)
             elif list_mode and shown_search is not None and shown_result is not None:
-                draw_no_mileage_list(no_mileage_listings(shown_search, shown_result))
+                draw_no_mileage_list(no_mileage_listings(shown_search, shown_result, hidden_ids()))
             elif pinned is not None:
                 draw_listing(pinned)
             else:
@@ -393,6 +401,10 @@ def search_page(request: Request) -> None:
             ui.button(save_label(saved), on_click=lambda: favorite_toggled(listing)).props(
                 "unelevated color=amber-8" if saved else "outline color=amber-8"
             )
+            is_hidden = listing.id in hidden_ids()
+            ui.button(hide_label(is_hidden), on_click=lambda: hide_toggled(listing)).props(
+                "unelevated color=grey-7" if is_hidden else "outline color=grey-7"
+            ).mark("hide-toggle")
         if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
@@ -411,7 +423,8 @@ def search_page(request: Request) -> None:
         """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
         if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
             return None
-        rows = plotted_listings(shown_search, shown_result, filters, curve_only).get(str(args.get("seriesName")))
+        plotted = plotted_listings(shown_search, shown_result, filters, curve_only, drawn_hidden)
+        rows = plotted.get(str(args.get("seriesName")))
         index = args.get("dataIndex")
         if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
             return None
@@ -452,18 +465,38 @@ def search_page(request: Request) -> None:
             pinned_details = details
             draw_preview()
 
+    def draw_chart(search: Search, result: SearchResult) -> None:
+        """Draw the points, curves, gold pins and ring, leaving out the hidden Listings."""
+        nonlocal drawn_hidden
+        drawn_hidden = hidden_ids()
+        chart.options.clear()
+        chart.options.update(chart_options(
+            search, result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites()), drawn_hidden
+        ))
+        chart.update()
+
     def redraw_pin() -> None:
         """Move the ring to the Pinned Listing and the gold pins to the favorites, without searching."""
         if shown_search is not None and shown_result is not None and chart.visible:
-            chart.options.clear()
-            chart.options.update(chart_options(
-                shown_search, shown_result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites())
-            ))
-            chart.update()
+            draw_chart(shown_search, shown_result)
+
+    def redraw_hidden() -> None:
+        """Apply a Hide or Unhide to the chart, status line and no-mileage note, without searching."""
+        if current is not None and not running:
+            redraw()
+        else:
+            redraw_pin()
 
     def favorites() -> list[SavedListing]:
         """This browser's favorites, newest first, read fresh so every tab agrees."""
         return read_saved(app.storage.user, FAVORITES_KEY)
+
+    def hidden() -> list[SavedListing]:
+        """This browser's hidden Listings, newest first, read fresh so every tab agrees."""
+        return read_saved(app.storage.user, HIDDEN_KEY)
+
+    def hidden_ids() -> frozenset[str]:
+        return saved_ids(hidden())
 
     def shown_listing(listing_id: str) -> Listing | None:
         """The current results' Listing with this id, or None when no shown Search found it."""
@@ -471,20 +504,51 @@ def search_page(request: Request) -> None:
             return None
         return next((listing for listing in shown_result.listings if listing.id == listing_id), None)
 
+    def origin_of(listing: Listing) -> SavedSearch | None:
+        """The Search to save `listing` under: the shown one when it found it, else where it was
+        last removed from in this tab, else None."""
+        if shown_search is not None and shown_listing(listing.id) is not None:
+            return SavedSearch.of(shown_search)
+        return removed_origins.get(listing.id)
+
+    def remove_entry(entries: list[SavedListing], listing: Listing) -> list[SavedListing]:
+        removed_origins.update((entry.listing.id, entry.search) for entry in entries if entry.listing.id == listing.id)
+        return remove_saved(entries, listing.id)
+
     def favorite_toggled(listing: Listing) -> None:
-        """Save `listing` as a favorite, or remove it when it already is one."""
-        entries = favorites()
+        """Save `listing` as a favorite, unhiding it, or remove it when it already is one."""
+        entries, hidden_entries = favorites(), hidden()
         if listing.id in saved_ids(entries):
-            removed_origins.update((entry.listing.id, entry.search) for entry in entries if entry.listing.id == listing.id)
-            entries = remove_saved(entries, listing.id)
+            entries = remove_entry(entries, listing)
         else:
-            found = shown_search is not None and shown_listing(listing.id) is not None
-            origin = SavedSearch.of(shown_search) if shown_search is not None and found else removed_origins.get(listing.id)
-            entries = add_saved(entries, listing, origin, datetime.now(UTC))
+            hidden_entries, entries = move_saved(hidden_entries, entries, listing, origin_of(listing), datetime.now(UTC))
+            write_saved(app.storage.user, HIDDEN_KEY, hidden_entries)
         write_saved(app.storage.user, FAVORITES_KEY, entries)
         draw_favorites()
         draw_preview()
-        redraw_pin()
+        redraw_hidden()
+
+    def hide_toggled(listing: Listing) -> None:
+        """Hide `listing`, taking it out of the favorites and the pin, or unhide it when hidden."""
+        nonlocal hovered, pinned, pinned_details
+
+        # --- Update The Stored Lists
+        entries, favorite_entries = hidden(), favorites()
+        if listing.id in saved_ids(entries):
+            entries = remove_entry(entries, listing)
+        else:
+            favorite_entries, entries = move_saved(favorite_entries, entries, listing, origin_of(listing), datetime.now(UTC))
+            write_saved(app.storage.user, FAVORITES_KEY, favorite_entries)
+            if hovered is not None and hovered.id == listing.id:
+                hovered = None
+            if pinned is not None and pinned.id == listing.id:
+                pinned = pinned_details = None
+        write_saved(app.storage.user, HIDDEN_KEY, entries)
+
+        # --- Redraw Without A Search
+        draw_favorites()
+        draw_preview()
+        redraw_hidden()
 
     def update_favorites(search: Search, result: SearchResult) -> None:
         """Refresh the favorites a finished Search returned and mark the ones it covered but missed."""
@@ -494,33 +558,53 @@ def search_page(request: Request) -> None:
             write_saved(app.storage.user, FAVORITES_KEY, updated)
             draw_favorites()
 
-    async def favorite_clicked(entry: SavedListing) -> None:
-        """Pin a favorite, as the current results' Listing when this Search found it too."""
+    async def saved_clicked(entry: SavedListing) -> None:
+        """Pin a favorite or hidden car, as the current results' Listing when this Search found it too."""
         await pin(shown_listing(entry.listing.id) or entry.listing)
 
     def draw_favorites() -> None:
-        """The toolbar count and the drawer's rows, newest first."""
-        entries = favorites()
+        """The toolbar count, the Hidden tab's count, and both tabs' rows, newest first."""
+        entries, hidden_entries = favorites(), hidden()
         favorites_button.set_text(button_text(len(entries)))
-        drawer.clear()
-        with drawer:
-            ui.label("Favorites").classes("text-lg font-bold")
+        hidden_tab.props["label"] = hidden_tab_text(len(hidden_entries))
+        hidden_tab.update()
+
+        # --- Favorites Tab
+        favorites_list.clear()
+        with favorites_list:
             if not entries:
                 ui.label(NO_FAVORITES_TEXT).classes("text-sm opacity-70")
             for entry in entries:
-                row = favorite_row(entry)
-                with ui.row().classes("w-full no-wrap items-start gap-1"):
-                    with ui.row().classes("grow min-w-0 no-wrap items-start gap-2 p-1 rounded hover:bg-gray-500/10 cursor-pointer") as item:
-                        if row.image:
-                            ui.image(row.image).classes("w-20 h-14 rounded shrink-0")
-                        with ui.column().classes("gap-0 grow min-w-0"):
-                            ui.label(row.title).classes("text-sm font-bold truncate w-full")
-                            ui.label(row.price_mileage).classes("text-sm")
-                            ui.label(row.source).classes("text-xs opacity-70")
-                            if row.missing:
-                                ui.label(row.missing).classes("text-xs text-amber-800 dark:text-amber-300")
-                    item.mark("favorite").on("click", lambda _, entry=entry: favorite_clicked(entry))
+                with draw_saved_row(entry, "saved", "favorite"):
                     ui.button("✕", on_click=lambda _, listing=entry.listing: favorite_toggled(listing)).props("flat dense size=sm")
+
+        # --- Hidden Tab
+        hidden_list.clear()
+        with hidden_list:
+            if not hidden_entries:
+                ui.label(HIDDEN_EMPTY_TEXT).classes("text-sm opacity-70")
+            for entry in hidden_entries:
+                with draw_saved_row(entry, "hidden", "hidden"):
+                    ui.button("Unhide", on_click=lambda _, listing=entry.listing: hide_toggled(listing)).props(
+                        "flat dense size=sm"
+                    ).mark("unhide")
+
+    def draw_saved_row(entry: SavedListing, verb: str, marker: str) -> ui.row:
+        """One drawer row's photo and text, clicked to pin it. Returns the row, for its button."""
+        row = favorite_row(entry, verb)
+        line = ui.row().classes("w-full no-wrap items-start gap-1")
+        with line:
+            with ui.row().classes("grow min-w-0 no-wrap items-start gap-2 p-1 rounded hover:bg-gray-500/10 cursor-pointer") as item:
+                if row.image:
+                    ui.image(row.image).classes("w-20 h-14 rounded shrink-0")
+                with ui.column().classes("gap-0 grow min-w-0"):
+                    ui.label(row.title).classes("text-sm font-bold truncate w-full")
+                    ui.label(row.price_mileage).classes("text-sm")
+                    ui.label(row.source).classes("text-xs opacity-70")
+                    if row.missing:
+                        ui.label(row.missing).classes("text-xs text-amber-800 dark:text-amber-300")
+            item.mark(marker).on("click", lambda _, entry=entry: saved_clicked(entry))
+        return line
 
     def no_mileage_clicked() -> None:
         nonlocal list_mode
@@ -585,7 +669,8 @@ def search_page(request: Request) -> None:
 
     def show(fetched: Search, result: SearchResult, final: bool) -> None:
         """Draw `result`, limited to the fetched Owner types and Sources checked now."""
-        nonlocal shown_search, shown_result
+        nonlocal shown_search, shown_result, drawn_hidden
+        drawn_hidden = hidden_ids()
         wanted = {OwnerType.OWNER: form.owner, OwnerType.DEALER: form.dealer}
         search = replace(
             fetched,
@@ -603,12 +688,10 @@ def search_page(request: Request) -> None:
         if message is not None:
             empty_label.set_text(message)
         elif result.listings:
-            chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only, saved_ids(favorites())))
-            chart.update()
+            draw_chart(search, result)
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
-        no_mileage = no_mileage_note(len(no_mileage_listings(search, result)))
+        no_mileage = no_mileage_note(len(no_mileage_listings(search, result, drawn_hidden)))
         no_mileage_label.set_visibility(no_mileage is not None)
         no_mileage_label.set_text(no_mileage or "")
         if list_mode:
@@ -622,9 +705,18 @@ def search_page(request: Request) -> None:
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
         if search.owner_types or search.sources:
-            status.set_text(status_text(search, result, filters, curve_only) if final else progress_text(len(result.listings)))
+            line = status_text(search, result, filters, curve_only, drawn_hidden) if final else progress_text(len(result.listings))
+            status.set_text(line)
 
-    drawer = ui.right_drawer(value=False, bordered=True).classes("p-2").props("width=340")
+    with ui.right_drawer(value=False, bordered=True).classes("p-2").props("width=340") as drawer:
+        with ui.tabs().classes("w-full") as drawer_tabs:
+            favorites_tab = ui.tab("favorites", "Favorites")
+            hidden_tab = ui.tab("hidden", hidden_tab_text(0))
+        with ui.tab_panels(drawer_tabs, value=favorites_tab, animated=False).classes("w-full"):
+            with ui.tab_panel(favorites_tab).classes("p-0"):
+                favorites_list = ui.column().classes("w-full gap-1")
+            with ui.tab_panel(hidden_tab).classes("p-0"):
+                hidden_list = ui.column().classes("w-full gap-1")
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
         with ui.row().classes("w-full items-center gap-3"):

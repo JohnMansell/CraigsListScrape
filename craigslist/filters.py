@@ -1,10 +1,11 @@
-"""Display filters: which Listings the chart draws in full and which it fades.
+"""Display filters: which Listings the chart draws in full, which it fades, and which it hides.
 
 A filter only changes how a point is drawn. Price curves and the default axes are still
-fitted to every Listing, so filtering never makes a curve less accurate. No NiceGUI here,
-so the rules test without a browser.
+fitted to every Listing, so filtering never makes a curve less accurate. A hidden Listing,
+one this browser chose to Hide by `Listing.id`, is not drawn at all, but is fitted the same
+way. No NiceGUI here, so the rules test without a browser.
 """
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 
 from craigslist.listings import Listing
@@ -67,6 +68,17 @@ def match_counts(listings: Iterable[Listing], filters: Filters) -> tuple[int, in
     """How many of `listings` pass `filters`, and how many are faded."""
     passed = [filters.passes(listing) for listing in listings]
     return sum(passed), len(passed) - sum(passed)
+
+
+def unhidden(listings: Iterable[Listing], hidden_ids: Collection[str]) -> list[Listing]:
+    """`listings` without the hidden ones, in order. Hiding is by id, so the same car on
+    another Source stays."""
+    return [listing for listing in listings if listing.id not in hidden_ids]
+
+
+def hidden_count(listings: Iterable[Listing], hidden_ids: Collection[str]) -> int:
+    """How many of `listings` are hidden."""
+    return sum(listing.id in hidden_ids for listing in listings)
 
 
 def year_options(listings: Iterable[Listing]) -> list[int]:

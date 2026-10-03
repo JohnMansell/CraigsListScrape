@@ -1,9 +1,10 @@
-"""Favorites: Listings a browser saved, kept as JSON snapshots, built without NiceGUI.
+"""Favorites and hidden Listings a browser saved, kept as JSON snapshots, built without NiceGUI.
 
 A saved Listing is a snapshot of every Listing field, the Search it came from and when it
 was saved, so it shows in Preview even when no later Search finds it. The page keeps the
-list in `app.storage.user` under `FAVORITES_KEY`, newest first; these helpers take any
-mapping and a key, so another list of saved Listings can use them under its own key.
+favorites in `app.storage.user` under `FAVORITES_KEY` and the hidden Listings under
+`HIDDEN_KEY`, each newest first; these helpers take any mapping and a key. A car is never
+both: `move_saved` takes it out of one list as it goes into the other.
 Identity is `Listing.id`: the same car on two Sources is two entries. A later finished
 Search updates the snapshots it returns and marks the ones it covers but misses
 (`update_from_search`); nothing ever fetches a favorite on its own.
@@ -22,7 +23,10 @@ from craigslist.sources import SOURCES
 
 FAVORITES_KEY = "favorites"
 """The `app.storage.user` key holding this browser's favorites, a list of `saved_to_json` dicts."""
+HIDDEN_KEY = "hidden"
+"""The `app.storage.user` key holding this browser's hidden Listings, in the same JSON as favorites."""
 EMPTY_TEXT = "Nothing saved yet. Hover or click a point, then ☆ Save in the Preview panel."
+HIDDEN_EMPTY_TEXT = "Nothing hidden. Hover or click a point, then Hide in the Preview panel."
 _LISTING_FIELDS = {field.name for field in fields(Listing)}
 
 
@@ -167,6 +171,19 @@ def remove_saved(entries: Sequence[SavedListing], listing_id: str) -> list[Saved
     return [entry for entry in entries if entry.listing.id != listing_id]
 
 
+def move_saved(
+    source: Sequence[SavedListing],
+    target: Sequence[SavedListing],
+    listing: Listing,
+    search: SavedSearch | None,
+    saved: datetime,
+) -> tuple[list[SavedListing], list[SavedListing]]:
+    """`source` without `listing` and `target` with it first, so it is never in both. With no
+    `search`, it keeps the origin of its entry in `source`."""
+    origin = search or next((entry.search for entry in source if entry.listing.id == listing.id), None)
+    return remove_saved(source, listing.id), add_saved(target, listing, origin, saved)
+
+
 def update_from_search(
     entries: Sequence[SavedListing], search: Search, result: SearchResult, now: datetime
 ) -> list[SavedListing]:
@@ -215,8 +232,14 @@ def price_text(price: int, saved_price: int) -> str:
     return f"${price:,}, was ${saved_price:,} when saved"
 
 
-def favorite_row(entry: SavedListing) -> FavoriteRow:
-    """A drawer row. The saved and missing dates are in the server's local time."""
+def hidden_tab_text(count: int) -> str:
+    """The drawer tab listing the hidden Listings."""
+    return f"Hidden ({count})"
+
+
+def favorite_row(entry: SavedListing, verb: str = "saved") -> FavoriteRow:
+    """A drawer row; `verb` names the date ("saved" or "hidden"). The saved and missing dates
+    are in the server's local time."""
     listing = entry.listing
     mileage = f"{listing.mileage:,} mi" if listing.mileage is not None else UNKNOWN_MILEAGE
     missing = entry.missing_since
@@ -224,6 +247,6 @@ def favorite_row(entry: SavedListing) -> FavoriteRow:
         image=listing.images[0] if listing.images else None,
         title=listing.title,
         price_mileage=f"{price_text(listing.price, entry.first_price)}  |  {mileage}",
-        source=f"{source_name(listing)}  ·  saved {entry.saved.astimezone():%Y-%m-%d %H:%M}",
+        source=f"{source_name(listing)}  ·  {verb} {entry.saved.astimezone():%Y-%m-%d %H:%M}",
         missing=f"Not in latest Search ({missing.astimezone():%Y-%m-%d})" if missing is not None else None,
     )

@@ -2,7 +2,16 @@ from dataclasses import replace
 
 import pytest
 
-from craigslist.filters import Filters, Flag, match_counts, trim_options, year_bounds, year_options
+from craigslist.filters import (
+    Filters,
+    Flag,
+    hidden_count,
+    match_counts,
+    trim_options,
+    unhidden,
+    year_bounds,
+    year_options,
+)
 from craigslist.listings import Listing, OwnerType, Source
 
 CAR = Listing("carfax:1", Source.CARFAX, "car", 10_000, 50_000, "https://example.org/1", (), OwnerType.DEALER)
@@ -124,3 +133,18 @@ def test_trim_options_are_the_distinct_known_trims_grouped_by_exact_text():
     listings = [replace(CAR, trim=trim) for trim in ("Sport", None, "EX-L", "Sport", "sport", "EX L")]
 
     assert trim_options(listings) == ["EX L", "EX-L", "Sport", "sport"]
+
+
+def test_unhidden_drops_hidden_ids_only_and_the_same_car_on_another_source_stays():
+    carmax_twin = replace(CAR, id="carmax:1", source=Source.CARMAX)
+    other = replace(CAR, id="carfax:2")
+
+    assert unhidden([CAR, carmax_twin, other], {"carfax:1"}) == [carmax_twin, other]
+    assert unhidden([CAR, other], frozenset()) == [CAR, other]
+
+
+def test_hidden_count_counts_the_listings_whose_id_is_hidden():
+    other = replace(CAR, id="carfax:2")
+
+    assert hidden_count([CAR, other], {"carfax:1", "carfax:99"}) == 1
+    assert hidden_count([CAR, other], frozenset()) == 0

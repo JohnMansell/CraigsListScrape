@@ -1,7 +1,9 @@
 """What the Preview panel shows for a Listing, built without NiceGUI so it tests without a browser."""
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from craigslist.filters import unhidden
 from craigslist.listings import Fetch, HttpFetcher, Listing, Source, listing_attributes
 from craigslist.search import Search, SearchResult
 
@@ -96,11 +98,17 @@ def save_label(saved: bool) -> str:
     return "★ Saved" if saved else "☆ Save"
 
 
-def no_mileage_listings(shown: Search, result: SearchResult) -> list[Listing]:
-    """The Listings of the shown Sources that are left off the chart for having no mileage."""
+def hide_label(hidden: bool) -> str:
+    """The Hide toggle beside Save, showing whether the Listing is hidden."""
+    return "Unhide" if hidden else "Hide"
+
+
+def no_mileage_listings(shown: Search, result: SearchResult, hidden_ids: Collection[str] = frozenset()) -> list[Listing]:
+    """The Listings of the shown Sources that are left off the chart for having no mileage,
+    leaving out the hidden ones."""
     return [
         listing
-        for listing in result.listings
+        for listing in unhidden(result.listings, hidden_ids)
         if listing.mileage is None and (
             (listing.source == Source.CRAIGSLIST and listing.owner_type in shown.owner_types)
             or (listing.source != Source.CRAIGSLIST and listing.source in shown.sources)

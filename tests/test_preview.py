@@ -6,6 +6,7 @@ from craigslist.preview import (
     EMPTY_TEXT,
     LOADING_TEXT,
     detail_lines,
+    hide_label,
     load_details,
     no_mileage_listings,
     no_mileage_note,
@@ -246,3 +247,15 @@ def test_content_shows_the_trim_when_known():
 def test_the_save_button_shows_whether_the_listing_is_saved():
     assert save_label(False) == "☆ Save"
     assert save_label(True) == "★ Saved"
+
+
+def test_no_mileage_listings_leave_out_hidden_listings():
+    first, second = listing(1, mileage=None), listing(2, mileage=None)
+    result = SearchResult([first, second], {}, {})
+
+    assert no_mileage_listings(SEARCH, result, hidden_ids={"1"}) == [second]
+
+
+def test_hide_label_shows_whether_the_listing_is_hidden():
+    assert hide_label(False) == "Hide"
+    assert hide_label(True) == "Unhide"

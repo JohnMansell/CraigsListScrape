@@ -1,4 +1,4 @@
-"""The Favorites drawer on the real Search page, driven by NiceGUI's simulated user."""
+"""The Favorites drawer and hidden Listings on the real Search page, driven by NiceGUI's simulated user."""
 import asyncio
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -8,10 +8,11 @@ from nicegui.storage import Storage
 from nicegui.testing import user_simulation
 
 from craigslist import page
-from craigslist.chart import FAVORITES_NAME
+from craigslist.chart import FAVORITES_NAME, PIN_NAME
 from craigslist.curve import NotEnoughData
-from craigslist.favorites import EMPTY_TEXT, FAVORITES_KEY
+from craigslist.favorites import EMPTY_TEXT, FAVORITES_KEY, HIDDEN_KEY
 from craigslist.listings import Listing, OwnerType, Source
+from craigslist.preview import IDLE_TEXT
 from craigslist.search import Search, SearchResult
 from craigslist.sources import SOURCES
 
@@ -27,8 +28,12 @@ CARMAX_CAR = Listing(
 )
 
 
+def series_data(chart: ui.echart, name: str) -> list:
+    return next(series["data"] for series in chart.options["series"] if series["name"] == name)
+
+
 def favorite_pins(chart: ui.echart) -> list:
-    return next(series["data"] for series in chart.options["series"] if series["name"] == FAVORITES_NAME)
+    return series_data(chart, FAVORITES_NAME)
 
 
 def fake_search(search: Search, fetch=None, on_batch=None, should_stop=None) -> SearchResult:
@@ -148,3 +153,85 @@ def test_later_searches_update_a_favorites_price_and_mark_it_missing(tmp_path, m
     monkeypatch.setattr(page, "load_details", lambda listing: {})
 
     asyncio.run(later_searches_update_a_favorite(results))
+
+
+async def hide_and_unhide_a_car(searches: list[Search]) -> None:
+    async with user_simulation(root=page.search_page) as user:
+        # --- Save, Then Hide: The Point Goes Without A Search
+        await user.open(LINK)
+        await user.should_see(ui.echart, retries=20)
+        await user.should_see("Hidden (0)")
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "CarMax", "dataIndex": 0}
+        )
+        user.find(kind=ui.button, content="☆ Save").click()
+        await user.should_see("★ Favorites (1)")
+        user.find(marker="hide-toggle").click()
+        await user.should_see("Hidden (1)")
+        await user.should_see("★ Favorites (0)")
+        await user.should_see("CarMax  ·  hidden")
+        chart = user.find(ui.echart).elements.pop()
+        assert series_data(chart, "CarMax") == [] and favorite_pins(chart) == []
+        assert series_data(chart, "Owner") == [[120_000, 9_000]]
+        await user.should_see("2 listings: 1 owner, 0 dealer, 1 CarMax. 1 hidden")
+        with user:
+            assert [entry["listing"]["id"] for entry in app.storage.user[HIDDEN_KEY]] == [CARMAX_CAR.id]
+            assert app.storage.user[FAVORITES_KEY] == []
+        assert len(searches) == 1
+
+        # --- Kept Over A Reload And A Later Search
+        await user.open("/")
+        await user.should_see("Hidden (1)")
+        user.find(kind=ui.button, content="Search").click()
+        await user.should_see("1 hidden", retries=20)
+        chart = user.find(ui.echart).elements.pop()
+        assert series_data(chart, "CarMax") == []
+        assert len(searches) == 2
+
+        # --- Pin From The Hidden Tab, Then Unhide From Preview
+        user.find(marker="hidden").click()
+        await user.should_see("Open on CarMax")
+        await user.should_see(kind=ui.button, content="Unhide")
+        assert series_data(chart, PIN_NAME) == []
+        user.find(marker="hide-toggle").click()
+        await user.should_see("Hidden (0)")
+        assert series_data(chart, "CarMax") == [[41_000, 19_998]]
+        assert series_data(chart, PIN_NAME) == [[41_000, 19_998]]
+        await user.should_not_see("1 hidden")
+
+        # --- Hiding The Pinned Listing Clears The Pin
+        user.find(marker="hide-toggle").click()
+        await user.should_see("Hidden (1)")
+        await user.should_see(IDLE_TEXT)
+        assert series_data(chart, PIN_NAME) == [] and series_data(chart, "CarMax") == []
+
+        # --- Saving A Hidden Car Unhides It
+        user.find(marker="hidden").click()
+        await user.should_see("Open on CarMax")
+        user.find(kind=ui.button, content="☆ Save").click()
+        await user.should_see("★ Favorites (1)")
+        await user.should_see("Hidden (0)")
+        assert favorite_pins(chart) == [[41_000, 19_998]]
+
+        # --- Unhide From The Drawer
+        user.find(marker="hide-toggle").click()
+        await user.should_see("Hidden (1)")
+        await user.should_see("★ Favorites (0)")
+        user.find(marker="unhide").click()
+        await user.should_see("Hidden (0)")
+        assert series_data(chart, "CarMax") == [[41_000, 19_998]]
+        assert len(searches) == 2
+
+
+def test_a_hidden_car_is_not_drawn_kept_over_a_reload_and_unhidden(tmp_path, monkeypatch):
+    monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
+    searches: list[Search] = []
+
+    def counted_search(search: Search, *args) -> SearchResult:
+        searches.append(search)
+        return fake_search(search, *args)
+
+    monkeypatch.setattr(page, "run_live_search", counted_search)
+    monkeypatch.setattr(page, "load_details", lambda listing: {})
+
+    asyncio.run(hide_and_unhide_a_car(searches))
