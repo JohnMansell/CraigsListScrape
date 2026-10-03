@@ -219,6 +219,13 @@ def test_a_cancelled_or_failed_search_marks_nothing_missing(result):
     assert update_from_search(entries, COVERING, result, LATER) == entries
 
 
+def test_a_source_that_skipped_or_stopped_at_a_page_cap_marks_nothing_missing():
+    entries = [saved(CRAIGSLIST), saved(CARFAX), saved(CARMAX)]
+    result = result_of(incomplete_sources=frozenset({Source.CRAIGSLIST, Source.CARMAX}))
+
+    assert [entry.missing_since for entry in update_from_search(entries, COVERING, result, LATER)] == [None, LATER, None]
+
+
 def test_a_failed_source_still_lets_the_other_sources_mark_their_favorites():
     entries = [saved(CARFAX), saved(CARMAX)]
     result = result_of(source_errors={Source.CARFAX: ListingSourceError("Carfax down")})

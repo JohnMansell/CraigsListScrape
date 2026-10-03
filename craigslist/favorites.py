@@ -69,14 +69,16 @@ class SavedListing:
         return self.saved_price if self.saved_price is not None else self.listing.price
 
     def covered_by(self, search: Search, result: SearchResult) -> bool:
-        """Whether a Search with no stop and no failure for this Listing's Source would have
-        returned it: same place and car as its origin, and its Source (for Craigslist, its
-        owner type) fetched."""
+        """Whether a Search with no stop, failure, skip or page cap for this Listing's Source
+        would have returned it: same place and car as its origin, and its Source (for
+        Craigslist, its owner type) fetched."""
         if self.search is None or result.cancelled:
             return False
         if not _same_search(self.search, SavedSearch.of(search)):
             return False
         source = self.listing.source
+        if source in result.incomplete_sources:
+            return False
         if source == Source.CRAIGSLIST:
             return self.listing.owner_type in search.owner_types and result.error is None
         return source in search.sources and source not in result.source_errors

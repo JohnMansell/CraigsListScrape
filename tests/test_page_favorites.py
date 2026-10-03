@@ -235,3 +235,30 @@ def test_a_hidden_car_is_not_drawn_kept_over_a_reload_and_unhidden(tmp_path, mon
     monkeypatch.setattr(page, "load_details", lambda listing: {})
 
     asyncio.run(hide_and_unhide_a_car(searches))
+
+
+async def open_a_favorite_from_another_search() -> None:
+    async with user_simulation(root=page.search_page) as user:
+        await user.open(LINK)
+        await user.should_see(ui.echart, retries=20)
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "Owner", "dataIndex": 0}
+        )
+        user.find(kind=ui.button, content="☆ Save").click()
+        await user.should_see("★ Favorites (1)")
+
+        await user.open("/")  # no Search, so the favorite is outside the shown results
+        user.find(marker="favorite").click()
+        await user.should_see(OWNER_CAR.title)
+        await user.should_see("No details available")
+
+
+def test_a_favorite_opened_from_the_drawer_outside_the_results_fetches_nothing(tmp_path, monkeypatch):
+    monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
+    fetched: list[Listing] = []
+    monkeypatch.setattr(page, "run_live_search", fake_search)
+    monkeypatch.setattr(page, "load_details", lambda listing: fetched.append(listing) or {})
+
+    asyncio.run(open_a_favorite_from_another_search())
+
+    assert fetched == []

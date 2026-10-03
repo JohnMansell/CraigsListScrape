@@ -450,12 +450,15 @@ def search_page(request: Request) -> None:
         if listing is not None:
             await pin(listing)
 
-    async def pin(listing: Listing) -> None:
-        """Make `listing` the Pinned Listing, ring it, and load its details off the UI thread."""
+    async def pin(listing: Listing, fetch_details: bool = True) -> None:
+        """Make `listing` the Pinned Listing, ring it, and load its details off the UI thread
+        unless `fetch_details` is False."""
         nonlocal pinned, pinned_details, list_mode
-        pinned, pinned_details, list_mode = listing, None, False
+        pinned, pinned_details, list_mode = listing, None if fetch_details else {}, False
         draw_preview()
         redraw_pin()
+        if not fetch_details:
+            return
         try:
             details = await run.io_bound(load_details, listing)
         except Exception as error:  # a failed detail fetch must not break the page
@@ -559,8 +562,13 @@ def search_page(request: Request) -> None:
             draw_favorites()
 
     async def saved_clicked(entry: SavedListing) -> None:
-        """Pin a favorite or hidden car, as the current results' Listing when this Search found it too."""
-        await pin(shown_listing(entry.listing.id) or entry.listing)
+        """Pin a favorite or hidden car, as the current results' Listing when this Search found it
+        too. Otherwise pin its snapshot without fetching: nothing fetches a saved car's own page."""
+        found = shown_listing(entry.listing.id)
+        if found is not None:
+            await pin(found)
+        else:
+            await pin(entry.listing, fetch_details=False)
 
     def draw_favorites() -> None:
         """The toolbar count, the Hidden tab's count, and both tabs' rows, newest first."""

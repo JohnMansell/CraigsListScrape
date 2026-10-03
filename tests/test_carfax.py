@@ -222,6 +222,22 @@ def test_a_band_still_full_at_the_page_cap_is_split_and_deduplicated(monkeypatch
     assert len(ids) == len(set(ids))  # deduplicated
     assert any("band-" in listing_id for listing_id in ids)  # the split bands were actually paged
     assert results.reported_total == 5  # taken from the first, unsplit band
+    assert results.complete
+
+
+def test_a_band_full_at_a_single_dollar_marks_the_search_incomplete(monkeypatch):
+    monkeypatch.setattr(carfax, "PAGE_SIZE", 1)
+    monkeypatch.setattr(carfax, "MAX_PAGE", 1)
+    monkeypatch.setattr(carfax, "PRICE_CEILING", 1)
+    item = {
+        "id": "always", "vdpUrl": "https://www.carfax.com/vehicle/always",
+        "year": 2020, "make": "Honda", "model": "Civic", "currentPrice": 1,
+    }
+
+    results = search_carfax(Search(SAN_FRANCISCO, "Honda", "Civic"), lambda url: json.dumps({"totalListingCount": 9, "listings": [item]}))
+
+    assert results.error is None
+    assert not results.complete
 
 
 # Failure and cancelling
@@ -269,7 +285,7 @@ def test_a_model_with_no_carfax_name_is_skipped_and_logged(log_messages):
 
     results = search_carfax(Search(SAN_FRANCISCO, "Porsche", "718"), fetch)
 
-    assert results == SearchResults([])
+    assert results == SearchResults([], complete=False)
     assert any("no Carfax name" in message for message in log_messages)
 
 

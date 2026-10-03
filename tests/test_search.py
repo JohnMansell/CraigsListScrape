@@ -270,6 +270,7 @@ def test_carmax_listings_sit_alongside_craigslist_and_carfax():
 
     assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX, Source.CARMAX}
     assert set(result.source_curves) == {Source.CARFAX, Source.CARMAX}
+    assert result.incomplete_sources == frozenset()
 
 
 def test_a_carmax_failure_keeps_the_other_sources_listings():
@@ -278,3 +279,19 @@ def test_a_carmax_failure_keeps_the_other_sources_listings():
     assert set(result.source_errors) == {Source.CARMAX}
     assert result.error is None
     assert {listing.source for listing in result.listings} == {Source.CRAIGSLIST, Source.CARFAX}
+
+
+def test_a_source_that_skipped_its_search_is_incomplete(monkeypatch):
+    monkeypatch.setattr("craigslist.carmax.carmax_model", lambda make, model: None)
+
+    result = run_search(ALL_SOURCES, triple_fetch(fixture("carmax_last_page.json")))
+
+    assert result.incomplete_sources == frozenset({Source.CARMAX})
+
+
+def test_a_craigslist_search_stopped_at_its_batch_limit_is_incomplete(paged_responses, monkeypatch):
+    monkeypatch.setattr(listings, "MAX_BATCH_REQUESTS", 1)
+
+    result = run_search(OWNER_SEARCH, paged_fetch(paged_responses))
+
+    assert result.incomplete_sources == frozenset({Source.CRAIGSLIST})

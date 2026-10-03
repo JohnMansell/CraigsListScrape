@@ -70,6 +70,9 @@ class SearchResults:
     arrived before it."""
     cancelled: bool = False
     """True when `should_stop` ended the search early. `listings` holds what arrived."""
+    complete: bool = True
+    """False when the search was skipped or stopped at a page cap with no error, so a car it
+    would have found may be missing from `listings`."""
 
 
 class _Stopped(Exception):
@@ -101,7 +104,7 @@ def search_carmax(
         model_slug = carmax_model(search.make, search.model)
         if model_slug is None:
             logger.warning("{}: {} {} has no CarMax name, skipping", API_NAME, search.make, search.model)
-            return SearchResults([])
+            return SearchResults([], complete=False)
     uri = "/cars" + (f"/{make_slug}" if make_slug else "") + (f"/{model_slug}" if model_slug else "")
 
     # --- Pages
@@ -110,6 +113,7 @@ def search_carmax(
     reported_total = 0
     error: ListingSourceError | None = None
     cancelled = False
+    complete = True
     try:
         for page in range(MAX_PAGES):
             if should_stop is not None and should_stop():
@@ -123,7 +127,7 @@ def search_carmax(
                     logger.warning(
                         "{}: CarMax ignored {} (it does not know the slug), skipping", API_NAME, uri
                     )
-                    return SearchResults([], reported_total, requests)
+                    return SearchResults([], reported_total, requests, complete=False)
             batch = [listing for item in items if isinstance(item, dict) and (listing := _parse_item(item)) is not None]
             new = [listing for listing in batch if listing.id not in results]
             results.update({listing.id: listing for listing in new})
@@ -132,6 +136,7 @@ def search_carmax(
             if len(items) < PAGE_SIZE:
                 break
         else:
+            complete = False
             logger.warning(
                 "{}: {} pages of {} were all full, stopping at {} Listings; more may exist",
                 API_NAME, MAX_PAGES, PAGE_SIZE, len(results),
@@ -142,7 +147,7 @@ def search_carmax(
     except ListingSourceError as failure:
         error = failure
         logger.warning("{}: failed after {} requests with {} Listings: {}", API_NAME, requests, len(results), failure)
-    return SearchResults(list(results.values()), reported_total, requests, error, cancelled)
+    return SearchResults(list(results.values()), reported_total, requests, error, cancelled, complete)
 
 
 def _facets_match(body: dict[str, Any], make_slug: str | None, model_slug: str | None) -> bool:

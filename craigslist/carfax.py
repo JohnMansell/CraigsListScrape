@@ -61,6 +61,9 @@ class SearchResults:
     arrived before it."""
     cancelled: bool = False
     """True when `should_stop` ended the search early. `listings` holds what arrived."""
+    complete: bool = True
+    """False when the search was skipped or stopped at a page cap with no error, so a car it
+    would have found may be missing from `listings`."""
 
 
 class _Stopped(Exception):
@@ -90,7 +93,7 @@ def search_carfax(
         carfax_model_name = carfax_model(search.make, search.model)
         if carfax_model_name is None:
             logger.warning("{}: {} {} has no Carfax name, skipping", API_NAME, search.make, search.model)
-            return SearchResults([])
+            return SearchResults([], complete=False)
 
     results: dict[str, Listing] = {}
     requests = 0
@@ -98,6 +101,7 @@ def search_carfax(
     cancelled = False
     reported_total = 0
     first_band = True
+    complete = True
 
     def counted_fetch(url: str) -> str:
         nonlocal requests
@@ -125,6 +129,7 @@ def search_carfax(
             if hit_cap:
                 split = _split_band(price_min, price_max)
                 if split is None:
+                    complete = False
                     logger.warning("{}: price band ${:,}-${:,} would not split further, some Listings may be missing", API_NAME, price_min or 0, price_max or PRICE_CEILING)
                 else:
                     bands.extend(split)
@@ -134,7 +139,7 @@ def search_carfax(
     except ListingSourceError as failure:
         error = failure
         logger.warning("{}: failed after {} requests with {} Listings: {}", API_NAME, requests, len(results), failure)
-    return SearchResults(list(results.values()), reported_total, requests, error, cancelled)
+    return SearchResults(list(results.values()), reported_total, requests, error, cancelled, complete)
 
 
 def _page_band(

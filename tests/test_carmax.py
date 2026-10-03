@@ -183,6 +183,7 @@ def test_a_search_still_full_at_the_page_cap_stops_and_warns(small_pages, monkey
     assert len(fetch.urls) == 2  # never asks for the third page
     assert len(results.listings) == 2 * FIXTURE_PAGE_SIZE - 1
     assert results.error is None
+    assert not results.complete
     assert any("more may exist" in message for message in log_messages)
 
 
@@ -227,7 +228,7 @@ def test_a_model_with_no_carmax_name_is_skipped_and_logged(log_messages):
 
     results = search_carmax(Search(SAN_FRANCISCO, "Mercedes-Benz", "GLC"), fetch)
 
-    assert results == SearchResults([])
+    assert results == SearchResults([], complete=False)
     assert any("no CarMax name" in message for message in log_messages)
 
 
@@ -239,6 +240,7 @@ def test_an_ignored_model_slug_is_skipped_with_a_warning_and_no_listings(small_p
 
     assert results.listings == []
     assert results.error is None
+    assert not results.complete
     assert batches == []
     assert len(fetch.urls) == 1  # no paging through the broader results
     assert any("ignored" in message for message in log_messages)
