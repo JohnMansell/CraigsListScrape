@@ -44,24 +44,29 @@ class ChartRange:
 
 
 def chart_options(
-    search: Search, result: SearchResult, pinned_id: str | None = None, filters: Filters = Filters()
+    search: Search,
+    result: SearchResult,
+    pinned_id: str | None = None,
+    filters: Filters = Filters(),
+    curve_only: Collection[Source] = frozenset(),
 ) -> dict[str, Any]:
     """A scatter per searched owner type, owner filled and dealer hollow, plus each fitted curve.
 
     Listings without mileage are left off. The axes fit the points the curves kept, so a
     price outlier does not squash the rest; points outside are drawn as arrows at the edge.
     A Listing failing `filters` is a small light-grey dot; curves and axes ignore `filters`.
-    Dragging on the chart zooms, and the toolbox restores the default view. The Pinned
+    A Source in `curve_only` has no points series, only its curve. Dragging on the chart zooms, and the toolbox restores the default view. The Pinned
     Listing, when it is on the chart, is ringed by a last series that is always present
     (empty when nothing is pinned), so pinning never changes the series count.
     """
     view = default_range(search, result)
-    plotted = plotted_listings(search, result, filters)
+    plotted = plotted_listings(search, result, filters, curve_only)
     series: list[dict[str, Any]] = []
     for owner_type in search.owner_types:
         series.append(_points(owner_type, plotted[NAMES[owner_type]], view, filters))
     for source in search.sources:
-        series.append(_source_points(source, plotted[SOURCES[source].name], view, filters))
+        if source not in curve_only:
+            series.append(_source_points(source, plotted[SOURCES[source].name], view, filters))
     for owner_type in search.owner_types:
         curve = result.curves.get(owner_type)
         if isinstance(curve, PriceCurve):
@@ -85,11 +90,14 @@ def chart_options(
     }
 
 
-def plotted_listings(search: Search, result: SearchResult, filters: Filters = Filters()) -> dict[str, list[Listing]]:
+def plotted_listings(
+    search: Search, result: SearchResult, filters: Filters = Filters(), curve_only: Collection[Source] = frozenset()
+) -> dict[str, list[Listing]]:
     """For each point series name, the Listings behind its points in data order.
 
     A chart event gives a series name and a data index; this maps them back to a Listing.
     Listings failing `filters` come first in each series, so the full points draw over them.
+    A Source in `curve_only` draws no points, so it has no entry.
     """
     mapping = {
         NAMES[owner_type]: [
@@ -100,7 +108,8 @@ def plotted_listings(search: Search, result: SearchResult, filters: Filters = Fi
         for owner_type in search.owner_types
     }
     for source in search.sources:
-        mapping[SOURCES[source].name] = _plottable(source, result)
+        if source not in curve_only:
+            mapping[SOURCES[source].name] = _plottable(source, result)
     return {name: sorted(listings, key=filters.passes) for name, listings in mapping.items()}
 
 
@@ -173,9 +182,11 @@ def unfetched_message(
     return f"Search again to load {' and '.join(missing)} listings" if missing else None
 
 
-def status_text(search: Search, result: SearchResult, filters: Filters = Filters()) -> str:
-    """The count per owner type and source and, while a filter is active, how many points
-    match it and how many are faded."""
+def status_text(
+    search: Search, result: SearchResult, filters: Filters = Filters(), curve_only: Collection[Source] = frozenset()
+) -> str:
+    """The count per owner type and source and, while a filter is active, how many drawn
+    points match it and how many are faded."""
     parts = [
         f"{sum(listing.source == Source.CRAIGSLIST and listing.owner_type == owner_type for listing in result.listings)} "
         f"{owner_type}"
@@ -185,7 +196,7 @@ def status_text(search: Search, result: SearchResult, filters: Filters = Filters
         parts.append(f"{sum(listing.source == source for listing in result.listings)} {SOURCES[source].name}")
     text = f"{len(result.listings)} listings: {', '.join(parts)}"
     if filters.active():
-        points = [listing for listings in plotted_listings(search, result).values() for listing in listings]
+        points = [listing for listings in plotted_listings(search, result, curve_only=curve_only).values() for listing in listings]
         matched, faded = match_counts(points, filters)
         text += f". {matched} match filters, {faded} faded"
     return f"Cancelled. {text}" if result.cancelled else text

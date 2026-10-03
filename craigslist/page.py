@@ -198,6 +198,8 @@ def search_page(request: Request) -> None:
     """The panel lists the Listings with no mileage, until one is pinned."""
     filters = Filters()
     """The display filters: they fade points, never refit a curve or refetch."""
+    curve_only: frozenset[Source] = frozenset()
+    """Sources drawn as their Price curve alone, points hidden."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -265,6 +267,11 @@ def search_page(request: Request) -> None:
     def years_changed() -> None:
         low, high = year_bounds(min_year_select.value, max_year_select.value, list(min_year_select.options))
         set_filters(replace(filters, min_year=low, max_year=high))
+
+    def curve_only_changed(source: Source, on: bool) -> None:
+        nonlocal curve_only
+        curve_only = curve_only | {source} if on else curve_only - {source}
+        redraw()
 
     def trim_toggled(trim: str | None, selected: bool) -> None:
         hidden = filters.hidden_trims - {trim} if selected else filters.hidden_trims | {trim}
@@ -347,7 +354,7 @@ def search_page(request: Request) -> None:
         """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
         if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
             return None
-        rows = plotted_listings(shown_search, shown_result, filters).get(str(args.get("seriesName")))
+        rows = plotted_listings(shown_search, shown_result, filters, curve_only).get(str(args.get("seriesName")))
         index = args.get("dataIndex")
         if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
             return None
@@ -392,7 +399,7 @@ def search_page(request: Request) -> None:
         """Move the ring to the Pinned Listing without redrawing the points."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters))
+            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -476,7 +483,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
@@ -494,7 +501,7 @@ def search_page(request: Request) -> None:
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
         if search.owner_types or search.sources:
-            status.set_text(status_text(search, result, filters) if final else progress_text(len(result.listings)))
+            status.set_text(status_text(search, result, filters, curve_only) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
@@ -506,7 +513,9 @@ def search_page(request: Request) -> None:
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
             for source, info in SOURCES.items():
-                ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
+                with ui.row().classes("items-center gap-0 no-wrap"):
+                    ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
+                    ui.switch("curve only", on_change=lambda e, source=source: curve_only_changed(source, e.value)).props("dense size=xs").classes("text-xs opacity-70")
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
         with ui.row().classes("w-full items-center gap-4"):

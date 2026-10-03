@@ -574,3 +574,51 @@ def test_hiding_a_trim_fades_its_listings_and_leaves_curves_and_axes_alone():
         assert series_named(plain, name) == series_named(filtered, name)
     assert plain["xAxis"] == filtered["xAxis"] and plain["yAxis"] == filtered["yAxis"]
     assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, no_sport).endswith("2 match filters, 2 faded")
+
+
+# Curve only
+
+
+def test_curve_only_hides_a_sources_points_and_keeps_its_curve_and_legend_entry():
+    result = filtered_result()
+    hidden = frozenset({Source.CARFAX})
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    options = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, pinned_id="carfax:3", curve_only=hidden)
+
+    assert all(series["name"] != CARFAX.name for series in options["series"])
+    assert series_named(options, f"{CARFAX.name} curve") == series_named(plain, f"{CARFAX.name} curve")
+    assert f"{CARFAX.name} curve" in options["legend"]["data"]
+    assert series_named(options, "Owner") == series_named(plain, "Owner")
+    assert options["xAxis"] == plain["xAxis"] and options["yAxis"] == plain["yAxis"]
+    assert options["series"][-1]["data"] == []  # a hidden point gets no ring
+    assert CARFAX.name not in plotted_listings(CARFAX_SEARCH_WITH_OWNERS, result, curve_only=hidden)
+
+
+def test_curve_only_hides_edge_arrows_too():
+    result = SearchResult(
+        [carfax_listing(1, 50_000, 12_000), carfax_listing(2, 60_000, 95_000)], {}, {},
+        source_curves={Source.CARFAX: curve((10_000, 20_000), (110_000, 8_000))},
+    )
+
+    options = chart_options(CARFAX_SEARCH, result, curve_only=frozenset({Source.CARFAX}))
+
+    assert not any(series["type"] == "scatter" and series["data"] for series in options["series"])
+
+
+def test_curve_only_works_for_every_source():
+    result = SearchResult([carfax_listing(1, 1_000), carmax_listing(2, 2_000)], {}, {})
+
+    for source in SOURCES:
+        options = chart_options(CARMAX_SEARCH, result, curve_only=frozenset({source}))
+        shown = {series["name"] for series in options["series"]}
+        assert SOURCES[source].name not in shown
+        assert {info.name for other, info in SOURCES.items() if other != source} <= shown
+
+
+def test_curve_only_points_are_left_out_of_the_match_counts():
+    result = filtered_result()
+
+    text = status_text(CARFAX_SEARCH_WITH_OWNERS, result, ONE_OWNER, curve_only=frozenset({Source.CARFAX}))
+
+    assert text.endswith("1 match filters, 1 faded")
