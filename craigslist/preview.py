@@ -91,6 +91,11 @@ def posted_text(posted: datetime | None) -> str | None:
     return "Posted " + posted.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
+def save_label(saved: bool) -> str:
+    """The Save toggle beside the "Open on ..." link, showing whether the Listing is a favorite."""
+    return "★ Saved" if saved else "☆ Save"
+
+
 def no_mileage_listings(shown: Search, result: SearchResult) -> list[Listing]:
     """The Listings of the shown Sources that are left off the chart for having no mileage."""
     return [

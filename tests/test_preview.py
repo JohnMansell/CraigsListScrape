@@ -10,6 +10,7 @@ from craigslist.preview import (
     no_mileage_listings,
     no_mileage_note,
     preview_content,
+    save_label,
 )
 from craigslist.search import Search, SearchResult
 
@@ -240,3 +241,8 @@ def test_content_shows_the_model_year_when_known():
 def test_content_shows_the_trim_when_known():
     assert preview_content(replace(carfax_listing(), trim="Sport")).trim == "Trim: Sport"
     assert preview_content(listing()).trim is None
+
+
+def test_the_save_button_shows_whether_the_listing_is_saved():
+    assert save_label(False) == "☆ Save"
+    assert save_label(True) == "★ Saved"

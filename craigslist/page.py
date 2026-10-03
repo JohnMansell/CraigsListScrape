@@ -9,6 +9,7 @@ import secrets
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -28,6 +29,19 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
+from craigslist.favorites import (
+    EMPTY_TEXT as NO_FAVORITES_TEXT,
+    FAVORITES_KEY,
+    SavedListing,
+    SavedSearch,
+    add_saved,
+    button_text,
+    favorite_row,
+    read_saved,
+    remove_saved,
+    saved_ids,
+    write_saved,
+)
 from craigslist.filters import Filters, trim_options, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
@@ -37,6 +51,7 @@ from craigslist.preview import (
     no_mileage_listings,
     no_mileage_note,
     preview_content,
+    save_label,
 )
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 from craigslist.sources import SOURCES, choices_text
@@ -231,6 +246,8 @@ def search_page(request: Request) -> None:
     """The display filters: they fade points, never refit a curve or refetch."""
     curve_only: frozenset[Source] = frozenset()
     """Sources drawn as their Price curve alone, points hidden."""
+    removed_origins: dict[str, SavedSearch | None] = {}
+    """The Search a favorite removed in this tab came from, so saving it again keeps it."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -366,7 +383,12 @@ def search_page(request: Request) -> None:
         for line in (content.year, content.trim, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
-        ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+        with ui.row().classes("items-center gap-1"):
+            ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+            saved = listing.id in saved_ids(favorites())
+            ui.button(save_label(saved), on_click=lambda: favorite_toggled(listing)).props(
+                "unelevated color=amber-8" if saved else "outline color=amber-8"
+            )
         if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
@@ -432,6 +454,56 @@ def search_page(request: Request) -> None:
             chart.options.clear()
             chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
             chart.update()
+
+    def favorites() -> list[SavedListing]:
+        """This browser's favorites, newest first, read fresh so every tab agrees."""
+        return read_saved(app.storage.user, FAVORITES_KEY)
+
+    def shown_listing(listing_id: str) -> Listing | None:
+        """The current results' Listing with this id, or None when no shown Search found it."""
+        if shown_result is None:
+            return None
+        return next((listing for listing in shown_result.listings if listing.id == listing_id), None)
+
+    def favorite_toggled(listing: Listing) -> None:
+        """Save `listing` as a favorite, or remove it when it already is one."""
+        entries = favorites()
+        if listing.id in saved_ids(entries):
+            removed_origins.update((entry.listing.id, entry.search) for entry in entries if entry.listing.id == listing.id)
+            entries = remove_saved(entries, listing.id)
+        else:
+            found = shown_search is not None and shown_listing(listing.id) is not None
+            origin = SavedSearch.of(shown_search) if shown_search is not None and found else removed_origins.get(listing.id)
+            entries = add_saved(entries, listing, origin, datetime.now(UTC))
+        write_saved(app.storage.user, FAVORITES_KEY, entries)
+        draw_favorites()
+        draw_preview()
+
+    async def favorite_clicked(entry: SavedListing) -> None:
+        """Pin a favorite, as the current results' Listing when this Search found it too."""
+        await pin(shown_listing(entry.listing.id) or entry.listing)
+
+    def draw_favorites() -> None:
+        """The toolbar count and the drawer's rows, newest first."""
+        entries = favorites()
+        favorites_button.set_text(button_text(len(entries)))
+        drawer.clear()
+        with drawer:
+            ui.label("Favorites").classes("text-lg font-bold")
+            if not entries:
+                ui.label(NO_FAVORITES_TEXT).classes("text-sm opacity-70")
+            for entry in entries:
+                row = favorite_row(entry)
+                with ui.row().classes("w-full no-wrap items-start gap-1"):
+                    with ui.row().classes("grow min-w-0 no-wrap items-start gap-2 p-1 rounded hover:bg-gray-500/10 cursor-pointer") as item:
+                        if row.image:
+                            ui.image(row.image).classes("w-20 h-14 rounded shrink-0")
+                        with ui.column().classes("gap-0 grow min-w-0"):
+                            ui.label(row.title).classes("text-sm font-bold truncate w-full")
+                            ui.label(row.price_mileage).classes("text-sm")
+                            ui.label(row.source).classes("text-xs opacity-70")
+                    item.mark("favorite").on("click", lambda _, entry=entry: favorite_clicked(entry))
+                    ui.button("✕", on_click=lambda _, listing=entry.listing: favorite_toggled(listing)).props("flat dense size=sm")
 
     def no_mileage_clicked() -> None:
         nonlocal list_mode
@@ -534,6 +606,7 @@ def search_page(request: Request) -> None:
         if search.owner_types or search.sources:
             status.set_text(status_text(search, result, filters, curve_only) if final else progress_text(len(result.listings)))
 
+    drawer = ui.right_drawer(value=False, bordered=True).classes("p-2").props("width=340")
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
         with ui.row().classes("w-full items-center gap-3"):
@@ -549,6 +622,8 @@ def search_page(request: Request) -> None:
                     ui.switch("curve only", on_change=lambda e, source=source: curve_only_changed(source, e.value)).props("dense size=xs").classes("text-xs opacity-70")
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
+            ui.space()
+            favorites_button = ui.button(on_click=drawer.toggle).props("flat color=amber-9")
         with ui.row().classes("w-full items-center gap-4"):
             for name, label in FLAG_FILTERS:
                 with ui.row().classes("items-center gap-0 no-wrap"):
@@ -580,6 +655,7 @@ def search_page(request: Request) -> None:
     chart.on("chart:mouseover", point_hovered, ["seriesType", "seriesName", "dataIndex"])
     chart.on("chart:globalout", hover_ended, [])
     draw_preview()
+    draw_favorites()
     timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
     refresh_search_button()
     if from_link and form.problem() is None:
