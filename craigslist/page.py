@@ -28,7 +28,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
-from craigslist.filters import Filters, year_bounds, year_options
+from craigslist.filters import Filters, trim_options, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
@@ -266,13 +266,25 @@ def search_page(request: Request) -> None:
         low, high = year_bounds(min_year_select.value, max_year_select.value, list(min_year_select.options))
         set_filters(replace(filters, min_year=low, max_year=high))
 
+    def trim_toggled(trim: str | None, selected: bool) -> None:
+        hidden = filters.hidden_trims - {trim} if selected else filters.hidden_trims | {trim}
+        set_filters(replace(filters, hidden_trims=hidden))
+
     def fill_filter_options(listings: list[Listing]) -> None:
-        """Offer the years in a finished Search's results, the full range chosen."""
+        """Offer the years and trims in a finished Search's results, all of them chosen."""
         nonlocal filters
         years = year_options(listings)
-        filters = replace(filters, min_year=None, max_year=None)
+        filters = replace(filters, min_year=None, max_year=None, hidden_trims=frozenset())
         min_year_select.set_options(years, value=years[0] if years else None)
         max_year_select.set_options(years, value=years[-1] if years else None)
+        trim_row.clear()
+        with trim_row:
+            ui.label("Trim").classes("text-sm opacity-70")
+            for trim in (*trim_options(listings), None):
+                ui.chip(
+                    trim or "Unknown", selectable=True, selected=True,
+                    on_selection_change=lambda e, trim=trim: trim_toggled(trim, e.value),
+                ).props("dense outline")
 
     def redraw() -> None:
         """Apply the checkboxes to the finished Search at once, without fetching."""
@@ -313,7 +325,7 @@ def search_page(request: Request) -> None:
         ui.label(content.title).classes("font-bold")
         ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
-        for line in (content.year, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
+        for line in (content.year, content.trim, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
         ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
@@ -506,6 +518,7 @@ def search_page(request: Request) -> None:
                 min_year_select = ui.select([], label="Min year", on_change=years_changed).props("dense").classes("w-24")
                 max_year_select = ui.select([], label="Max year", on_change=years_changed).props("dense").classes("w-24")
                 ui.checkbox("include unknown year", value=True, on_change=lambda e: set_filters(replace(filters, include_unknown_year=e.value))).props("dense size=xs").classes("text-xs opacity-70")
+        trim_row = ui.row().classes("w-full items-center gap-1")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):

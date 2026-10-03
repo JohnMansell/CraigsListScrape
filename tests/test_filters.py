@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from craigslist.filters import Filters, Flag, match_counts, year_bounds, year_options
+from craigslist.filters import Filters, Flag, match_counts, trim_options, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 
 CAR = Listing("carfax:1", Source.CARFAX, "car", 10_000, 50_000, "https://example.org/1", (), OwnerType.DEALER)
@@ -105,3 +105,22 @@ def test_a_chosen_year_at_either_end_of_the_options_leaves_that_side_open():
     assert year_bounds(2015, 2018, options) == (None, 2018)
     assert year_bounds(None, None, options) == (None, None)
     assert year_bounds(None, None, []) == (None, None)
+
+
+# Trim
+
+
+def test_a_hidden_trim_fades_its_listings_and_unknown_is_its_own_chip():
+    sport, plain, unknown = replace(CAR, trim="Sport"), replace(CAR, trim="LX"), replace(CAR, trim=None)
+
+    hide_sport = Filters(hidden_trims=frozenset({"Sport"}))
+    assert not hide_sport.passes(sport) and hide_sport.passes(plain) and hide_sport.passes(unknown)
+    assert hide_sport.active()
+    hide_unknown = Filters(hidden_trims=frozenset({None}))
+    assert hide_unknown.passes(sport) and not hide_unknown.passes(unknown)
+
+
+def test_trim_options_are_the_distinct_known_trims_grouped_by_exact_text():
+    listings = [replace(CAR, trim=trim) for trim in ("Sport", None, "EX-L", "Sport", "sport", "EX L")]
+
+    assert trim_options(listings) == ["EX L", "EX-L", "Sport", "sport"]

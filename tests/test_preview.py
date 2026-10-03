@@ -235,3 +235,8 @@ def test_no_mileage_listings_includes_carmax_when_shown():
 def test_content_shows_the_model_year_when_known():
     assert preview_content(replace(listing(), year=2015)).year == "Model year 2015"
     assert preview_content(listing()).year is None
+
+
+def test_content_shows_the_trim_when_known():
+    assert preview_content(replace(carfax_listing(), trim="Sport")).trim == "Trim: Sport"
+    assert preview_content(listing()).trim is None

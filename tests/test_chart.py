@@ -560,3 +560,17 @@ def test_a_year_range_fades_other_years_and_leaves_curves_and_axes_alone():
     faded = [point for name in ("Owner", CARFAX.name) for point in series_named(filtered, name)["data"] if isinstance(point, dict)]
     assert len(faded) == 2
     assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, years).endswith("2 match filters, 2 faded")
+
+
+def test_hiding_a_trim_fades_its_listings_and_leaves_curves_and_axes_alone():
+    result = filtered_result()
+    result = replace(result, listings=[replace(item, trim="Sport" if index % 2 else None) for index, item in enumerate(result.listings)])
+    no_sport = Filters(hidden_trims=frozenset({"Sport"}))
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    filtered = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, filters=no_sport)
+
+    for name in ("Owner curve", f"{CARFAX.name} curve"):
+        assert series_named(plain, name) == series_named(filtered, name)
+    assert plain["xAxis"] == filtered["xAxis"] and plain["yAxis"] == filtered["yAxis"]
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, no_sport).endswith("2 match filters, 2 faded")

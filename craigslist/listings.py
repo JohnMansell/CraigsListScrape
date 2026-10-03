@@ -114,6 +114,8 @@ class Listing:
     """Carfax's price history has a drop; CarMax's `hasPriceDrop`. None for Craigslist."""
     year: int | None = None
     """The model year. Carfax and CarMax from the API; Craigslist from the title. None when unknown."""
+    trim: str | None = None
+    """Carfax's or CarMax's `trim`, exactly as spelled. None for Craigslist and when unknown."""
 
 
 @dataclass(frozen=True)

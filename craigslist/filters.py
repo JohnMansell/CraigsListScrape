@@ -38,6 +38,8 @@ class Filters:
     max_year: int | None = None
     include_unknown_year: bool = True
     """Pass a Listing whose model year could not be read."""
+    hidden_trims: frozenset[str | None] = frozenset()
+    """The trim chips deselected, by exact text; None is the Unknown chip. Empty fades nothing."""
 
     def passes(self, listing: Listing) -> bool:
         """Whether `listing` is drawn in full rather than faded."""
@@ -46,6 +48,7 @@ class Filters:
             and self.no_accidents.passes(listing.no_accidents)
             and self.price_dropped.passes(listing.price_dropped)
             and self._year_passes(listing.year)
+            and listing.trim not in self.hidden_trims
         )
 
     def _year_passes(self, year: int | None) -> bool:
@@ -57,7 +60,7 @@ class Filters:
         """Whether any filter can fade a Listing."""
         flags = any(flag.on for flag in (self.one_owner, self.no_accidents, self.price_dropped))
         years = self.min_year is not None or self.max_year is not None or not self.include_unknown_year
-        return flags or years
+        return flags or years or bool(self.hidden_trims)
 
 
 def match_counts(listings: Iterable[Listing], filters: Filters) -> tuple[int, int]:
@@ -77,3 +80,9 @@ def year_bounds(chosen_min: int | None, chosen_max: int | None, options: list[in
     low = chosen_min if options and chosen_min is not None and chosen_min != options[0] else None
     high = chosen_max if options and chosen_max is not None and chosen_max != options[-1] else None
     return low, high
+
+
+def trim_options(listings: Iterable[Listing]) -> list[str]:
+    """The distinct known trims in `listings`, sorted, one chip each. Grouped by exact text:
+    Carfax and CarMax may spell one trim differently, and merging them would be a guess."""
+    return sorted({listing.trim for listing in listings if listing.trim})
