@@ -54,6 +54,23 @@ FLAG_FILTERS = (("one_owner", "One owner"), ("no_accidents", "No accidents"), ("
 SEARCH_KEYS = ("state", "city", "make", "model")
 FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
+TAB_PICKS_TOP = """(event) => {{
+  const select = getElement({id});
+  if (event.key === "ArrowUp" || event.key === "ArrowDown") {{ select.arrowed = true; return; }}
+  if (event.key !== "Tab") {{ select.arrowed = false; return; }}
+  if (event.shiftKey || select.arrowed) return;  // an arrowed-to option: Quasar picks it
+  const typed = event.target.value?.trim().toLocaleLowerCase();
+  if (!typed) return;
+  const label = (option) => String(option.label).toLocaleLowerCase();
+  const top = select.initialOptions.find((option) => label(option) === typed)
+    ?? select.initialOptions.find((option) => label(option).includes(typed));
+  if (top === undefined) return;
+  const q = select.$refs.qRef;
+  q.setOptionIndex(-1);  // so Quasar's own Tab handling does not pick a stale highlight
+  q.toggleOption(top);
+}}"""
+"""Tab in a select's search box picks the top option matching the typed text, as the
+filtered dropdown lists it, instead of leaving the box empty."""
 DEFAULT_SEARCH = {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
 """What a browser with no link and no remembered Search starts from, so Search is one click."""
 
@@ -176,6 +193,10 @@ def _known(value: str | None, options: list[str]) -> str | None:
     if value is None:
         return None
     return next((option for option in options if option.casefold() == value.strip().casefold()), None)
+
+
+def _tab_picks_top(select: ui.select) -> ui.select:
+    return select.on("keydown.capture", js_handler=TAB_PICKS_TOP.format(id=select.id))
 
 
 def search_page(request: Request) -> None:
@@ -516,10 +537,10 @@ def search_page(request: Request) -> None:
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
         with ui.row().classes("w-full items-center gap-3"):
-            ui.select(lookup.states(), value=form.state, label="State", with_input=True, on_change=lambda e: state_changed(e.value)).classes("w-24")
-            city_select = ui.select(form.city_options(), value=form.city, label="City", with_input=True, on_change=lambda e: city_changed(e.value)).classes("w-56")
-            ui.select(lookup.makes(), value=form.make, label="Make", with_input=True, on_change=lambda e: make_changed(e.value)).classes("w-44")
-            model_select = ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value)).classes("w-44")
+            _tab_picks_top(ui.select(lookup.states(), value=form.state, label="State", with_input=True, on_change=lambda e: state_changed(e.value))).classes("w-24")
+            city_select = _tab_picks_top(ui.select(form.city_options(), value=form.city, label="City", with_input=True, on_change=lambda e: city_changed(e.value))).classes("w-56")
+            _tab_picks_top(ui.select(lookup.makes(), value=form.make, label="Make", with_input=True, on_change=lambda e: make_changed(e.value))).classes("w-44")
+            model_select = _tab_picks_top(ui.select(form.model_options(), value=form.model, label="Model", with_input=True, on_change=lambda e: model_changed(e.value))).classes("w-44")
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
             for source, info in SOURCES.items():
