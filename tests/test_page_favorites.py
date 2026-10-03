@@ -262,3 +262,124 @@ def test_a_favorite_opened_from_the_drawer_outside_the_results_fetches_nothing(t
     asyncio.run(open_a_favorite_from_another_search())
 
     assert fetched == []
+
+
+def key(name: str, action: str = "keydown", ctrl: bool = False) -> dict:
+    """The arguments ui.keyboard's browser side sends for one key event."""
+    return {
+        "action": action, "repeat": False, "altKey": False, "ctrlKey": ctrl, "metaKey": False,
+        "shiftKey": False, "key": name, "code": f"Key{name.upper()}", "location": 0,
+    }
+
+
+def menu_text(user, marker: str) -> str:
+    """The label of the point menu's item with this marker."""
+    item = user.find(marker=marker).elements.pop()
+    return item.default_slot.children[0].text
+
+
+def stored_ids(user, key_name: str) -> list[str]:
+    with user:
+        return [entry["listing"]["id"] for entry in app.storage.user[key_name]]
+
+
+async def save_and_hide_with_hotkeys(searches: list[Search]) -> None:
+    async with user_simulation(root=page.search_page) as user:
+        # --- F Saves The Hovered Car, Modified Or Released Keys Do Nothing
+        await user.open(LINK)
+        await user.should_see(ui.echart, retries=20)
+        keyboard = user.find(ui.keyboard)
+        keyboard.trigger("key", key("f"))  # no car in Preview yet
+        await user.should_see("★ Favorites (0)")
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "CarMax", "dataIndex": 0}
+        )
+        keyboard.trigger("key", key("f", ctrl=True)).trigger("key", key("f", action="keyup"))
+        await user.should_see("★ Favorites (0)")
+        keyboard.trigger("key", key("F"))
+        await user.should_see("★ Favorites (1)")
+        await user.should_see(kind=ui.button, content="★ Saved")
+        assert stored_ids(user, FAVORITES_KEY) == [CARMAX_CAR.id]
+
+        # --- H Hides It Without A Search
+        keyboard.trigger("key", key("h"))
+        await user.should_see("Hidden (1)")
+        await user.should_see("★ Favorites (0)")
+        chart = user.find(ui.echart).elements.pop()
+        assert series_data(chart, "CarMax") == []
+        keyboard.trigger("key", key("h"))  # Preview shows no car now
+        await user.should_see("Hidden (1)")
+
+        # --- The Pinned Listing Wins Over The Hovered One
+        user.find(marker="hidden").click()
+        await user.should_see("Open on CarMax")
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "Owner", "dataIndex": 0}
+        )
+        keyboard.trigger("key", key("h"))
+        await user.should_see("Hidden (0)")
+        assert series_data(chart, "CarMax") == [[41_000, 19_998]]
+        keyboard.trigger("key", key("f"))
+        await user.should_see("★ Favorites (1)")
+        assert stored_ids(user, FAVORITES_KEY) == [CARMAX_CAR.id]
+        assert len(searches) == 1
+
+
+def test_f_and_h_save_and_hide_the_car_in_preview(tmp_path, monkeypatch):
+    monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
+    searches: list[Search] = []
+
+    def counted_search(search: Search, *args) -> SearchResult:
+        searches.append(search)
+        return fake_search(search, *args)
+
+    monkeypatch.setattr(page, "run_live_search", counted_search)
+    monkeypatch.setattr(page, "load_details", lambda listing: {})
+
+    asyncio.run(save_and_hide_with_hotkeys(searches))
+
+
+async def save_and_hide_from_the_point_menu(searches: list[Search]) -> None:
+    async with user_simulation(root=page.search_page) as user:
+        # --- Empty Space Opens Nothing
+        await user.open(LINK)
+        await user.should_see(ui.echart, retries=20)
+        menu = user.find(ui.menu).elements.pop()
+        user.find(ui.echart).trigger("chart:contextmenu", {"x": 5, "y": 5})
+        assert not menu.value
+
+        # --- Save From The Menu
+        point = {"seriesType": "scatter", "seriesName": "CarMax", "dataIndex": 0, "x": 120, "y": 80}
+        user.find(ui.echart).trigger("chart:contextmenu", point)
+        assert menu.value
+        assert menu.parent_slot is not None and menu.parent_slot.parent._style["left"] == "120px"
+        assert (menu_text(user, "menu-save"), menu_text(user, "menu-hide")) == ("☆ Save", "Hide")
+        user.find(marker="menu-save").click()
+        await user.should_see("★ Favorites (1)")
+        assert not menu.value
+        assert stored_ids(user, FAVORITES_KEY) == [CARMAX_CAR.id]
+
+        # --- Hide From The Menu Without A Search
+        user.find(ui.echart).trigger("chart:contextmenu", point)
+        assert menu_text(user, "menu-save") == "★ Saved"
+        user.find(marker="menu-hide").click()
+        await user.should_see("Hidden (1)")
+        await user.should_see("★ Favorites (0)")
+        chart = user.find(ui.echart).elements.pop()
+        assert series_data(chart, "CarMax") == []
+        assert stored_ids(user, HIDDEN_KEY) == [CARMAX_CAR.id]
+        assert len(searches) == 1
+
+
+def test_right_clicking_a_point_offers_save_and_hide(tmp_path, monkeypatch):
+    monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
+    searches: list[Search] = []
+
+    def counted_search(search: Search, *args) -> SearchResult:
+        searches.append(search)
+        return fake_search(search, *args)
+
+    monkeypatch.setattr(page, "run_live_search", counted_search)
+    monkeypatch.setattr(page, "load_details", lambda listing: {})
+
+    asyncio.run(save_and_hide_from_the_point_menu(searches))

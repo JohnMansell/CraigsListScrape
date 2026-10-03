@@ -103,6 +103,35 @@ def hide_label(hidden: bool) -> str:
     return "Unhide" if hidden else "Hide"
 
 
+SAVE_KEY = "f"
+"""The key that toggles Save/Saved on the Preview panel's car."""
+HIDE_KEY = "h"
+"""The key that toggles Hide/Unhide on the Preview panel's car."""
+
+
+def save_tooltip(saved: bool) -> str:
+    """The Save toggle's tooltip, naming its key."""
+    return f"{'Remove from favorites' if saved else 'Save'} ({SAVE_KEY.upper()})"
+
+
+def hide_tooltip(hidden: bool) -> str:
+    """The Hide toggle's tooltip, naming its key."""
+    return f"{hide_label(hidden)} ({HIDE_KEY.upper()})"
+
+
+def key_action(key: str, ctrl: bool = False, alt: bool = False, meta: bool = False) -> str | None:
+    """"save" or "hide" for a pressed key, or None for any other key or one held with Ctrl, Alt
+    or Meta, so browser shortcuts keep working. Shift is allowed: it only changes the case."""
+    if ctrl or alt or meta:
+        return None
+    return {SAVE_KEY: "save", HIDE_KEY: "hide"}.get(key.casefold())
+
+
+def key_target(pinned: Listing | None, hovered: Listing | None) -> Listing | None:
+    """The car a hotkey acts on: the Pinned Listing, else the hovered one, else None."""
+    return pinned if pinned is not None else hovered
+
+
 def no_mileage_listings(shown: Search, result: SearchResult, hidden_ids: Collection[str] = frozenset()) -> list[Listing]:
     """The Listings of the shown Sources that are left off the chart for having no mileage,
     leaving out the hidden ones."""

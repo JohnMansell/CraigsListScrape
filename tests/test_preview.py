@@ -7,11 +7,15 @@ from craigslist.preview import (
     LOADING_TEXT,
     detail_lines,
     hide_label,
+    hide_tooltip,
+    key_action,
+    key_target,
     load_details,
     no_mileage_listings,
     no_mileage_note,
     preview_content,
     save_label,
+    save_tooltip,
 )
 from craigslist.search import Search, SearchResult
 
@@ -259,3 +263,32 @@ def test_no_mileage_listings_leave_out_hidden_listings():
 def test_hide_label_shows_whether_the_listing_is_hidden():
     assert hide_label(False) == "Hide"
     assert hide_label(True) == "Unhide"
+
+
+def test_the_save_and_hide_tooltips_name_their_keys():
+    assert save_tooltip(False) == "Save (F)"
+    assert save_tooltip(True) == "Remove from favorites (F)"
+    assert hide_tooltip(False) == "Hide (H)"
+    assert hide_tooltip(True) == "Unhide (H)"
+
+
+def test_f_saves_and_h_hides_in_either_case():
+    assert key_action("f") == "save"
+    assert key_action("F") == "save"
+    assert key_action("h") == "hide"
+    assert key_action("H") == "hide"
+    assert key_action("g") is None
+    assert key_action("Enter") is None
+
+
+def test_a_key_held_with_ctrl_alt_or_meta_does_nothing():
+    assert key_action("f", ctrl=True) is None
+    assert key_action("h", alt=True) is None
+    assert key_action("f", meta=True) is None
+
+
+def test_a_hotkey_acts_on_the_pinned_listing_before_the_hovered_one():
+    pinned, hovered = listing(1), listing(2)
+    assert key_target(pinned, hovered) is pinned
+    assert key_target(None, hovered) is hovered
+    assert key_target(None, None) is None

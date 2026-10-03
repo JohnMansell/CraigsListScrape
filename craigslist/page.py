@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 
 from loguru import logger
 from nicegui import app, run, ui
-from nicegui.events import EChartPointClickEventArguments, GenericEventArguments
+from nicegui.events import EChartPointClickEventArguments, GenericEventArguments, KeyEventArguments
 from starlette.requests import Request
 
 from craigslist import lookup
@@ -53,11 +53,15 @@ from craigslist.preview import (
     IDLE_TEXT,
     detail_lines,
     hide_label,
+    hide_tooltip,
+    key_action,
+    key_target,
     load_details,
     no_mileage_listings,
     no_mileage_note,
     preview_content,
     save_label,
+    save_tooltip,
 )
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 from craigslist.sources import SOURCES, choices_text
@@ -92,6 +96,11 @@ TAB_PICKS_TOP = """(event) => {{
 }}"""
 """Tab in a select's search box picks the top option matching the typed text, as the
 filtered dropdown lists it, instead of leaving the box empty."""
+POINT_CONTEXT_MENU = """(e) => emit({
+  seriesType: e.seriesType, seriesName: e.seriesName, dataIndex: e.dataIndex,
+  x: e.event?.event?.clientX, y: e.event?.event?.clientY,
+})"""
+"""Forward a right-click on a chart point with where it happened, for the point's menu."""
 DEFAULT_SEARCH = {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
 """What a browser with no link and no remembered Search starts from, so Search is one click."""
 
@@ -400,11 +409,11 @@ def search_page(request: Request) -> None:
             saved = entry is not None
             ui.button(save_label(saved), on_click=lambda: favorite_toggled(listing)).props(
                 "unelevated color=amber-8" if saved else "outline color=amber-8"
-            )
+            ).tooltip(save_tooltip(saved))
             is_hidden = listing.id in hidden_ids()
             ui.button(hide_label(is_hidden), on_click=lambda: hide_toggled(listing)).props(
                 "unelevated color=grey-7" if is_hidden else "outline color=grey-7"
-            ).mark("hide-toggle")
+            ).tooltip(hide_tooltip(is_hidden)).mark("hide-toggle")
         if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
@@ -442,6 +451,31 @@ def search_page(request: Request) -> None:
         if hovered is not None:
             hovered = None
             draw_preview()
+
+    def point_right_clicked(event: GenericEventArguments) -> None:
+        """Open the Save and Hide menu at the mouse for a right-clicked point, not for empty space."""
+        listing = point_listing(event.args)
+        if listing is None:
+            return
+        menu_anchor.style(f"left: {event.args.get('x') or 0}px; top: {event.args.get('y') or 0}px")
+        point_menu.clear()
+        with point_menu:
+            ui.menu_item(save_label(listing.id in saved_ids(favorites())), on_click=lambda: favorite_toggled(listing)).mark("menu-save")
+            ui.menu_item(hide_label(listing.id in hidden_ids()), on_click=lambda: hide_toggled(listing)).mark("menu-hide")
+        point_menu.open()
+
+    def key_pressed(event: KeyEventArguments) -> None:
+        """F saves or unsaves, H hides or unhides, the Pinned Listing, else the hovered one."""
+        if not event.action.keydown:
+            return
+        action = key_action(event.key.name, event.modifiers.ctrl, event.modifiers.alt, event.modifiers.meta)
+        listing = key_target(pinned, hovered)
+        if action is None or listing is None:
+            return
+        if action == "save":
+            favorite_toggled(listing)
+        else:
+            hide_toggled(listing)
 
     async def point_clicked(event: EChartPointClickEventArguments) -> None:
         listing = point_listing(
@@ -772,6 +806,12 @@ def search_page(request: Request) -> None:
         status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
     chart.on("chart:mouseover", point_hovered, ["seriesType", "seriesName", "dataIndex"])
     chart.on("chart:globalout", hover_ended, [])
+    chart.on("chart:contextmenu", point_right_clicked, js_handler=POINT_CONTEXT_MENU)
+    chart.on("contextmenu.prevent", js_handler="() => {}")  # no browser menu over the chart
+    with ui.element().style("position: fixed; left: 0px; top: 0px") as menu_anchor:
+        point_menu = ui.menu().props("no-parent-event")
+    # Hotkeys stay off while typing; unlike NiceGUI's default, a focused button (Save just clicked) allows them.
+    ui.keyboard(on_key=key_pressed, repeating=False, ignore=["input", "select", "textarea"])
     draw_preview()
     draw_favorites()
     timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
