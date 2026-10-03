@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -13,15 +14,18 @@ from craigslist.favorites import (
     favorite_row,
     listing_from_json,
     listing_to_json,
+    price_text,
     read_saved,
     remove_saved,
     saved_from_json,
     saved_ids,
     saved_to_json,
+    update_from_search,
     write_saved,
 )
-from craigslist.listings import Listing, OwnerType, Source
-from craigslist.search import Search
+from craigslist.listings import Listing, ListingSourceError, OwnerType, Source
+from craigslist.search import Search, SearchResult
+from craigslist.sources import SOURCES
 
 POSTED = datetime(2026, 9, 28, 14, 3, tzinfo=UTC)
 SAVED = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
@@ -154,3 +158,116 @@ def test_a_drawer_row_names_craigslist_by_owner_type_and_says_when_mileage_is_mi
     carfax_row = favorite_row(saved(CARFAX))
     assert carfax_row.image is None
     assert carfax_row.price_mileage == "$18,995  |  Mileage not listed"
+
+
+# --- Updates From Later Searches
+
+LATER = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+COVERING = Search("CA", "Sf Bay Area", "Honda", "Civic")
+
+
+def result_of(*listings: Listing, **fields) -> SearchResult:
+    return SearchResult(list(listings), {}, {}, **fields)
+
+
+def test_a_returned_favorite_takes_the_new_snapshot_and_keeps_its_first_saved_price():
+    cheaper = replace(CARMAX, price=17_500, mileage=41_200, images=("https://img2.carmax.com/new.jpg",))
+    entries = update_from_search([saved(CARMAX)], COVERING, result_of(cheaper), LATER)
+    again = update_from_search(entries, COVERING, result_of(replace(cheaper, price=16_900)), LATER)
+
+    assert entries == [SavedListing(cheaper, ORIGIN, SAVED, saved_price=19_998)]
+    assert again[0].listing.price == 16_900
+    assert again[0].saved_price == 19_998
+
+
+def test_a_new_favorite_keeps_its_own_price_as_the_first_saved_price():
+    assert add_saved([], CARMAX, ORIGIN, SAVED)[0].saved_price == 19_998
+    assert saved(CARMAX).saved_price == 19_998
+
+
+def test_a_covering_complete_search_without_the_favorite_marks_it_missing_with_the_date():
+    entries = [saved(CRAIGSLIST), saved(CARFAX), saved(CARMAX)]
+
+    updated = update_from_search(entries, COVERING, result_of(), LATER)
+
+    assert [entry.missing_since for entry in updated] == [LATER, LATER, LATER]
+    assert [entry.listing for entry in updated] == [CRAIGSLIST, CARFAX, CARMAX]
+
+
+def test_a_search_returning_a_missing_favorite_clears_the_mark():
+    missing = update_from_search([saved(CARMAX)], COVERING, result_of(), LATER)
+
+    assert update_from_search(missing, COVERING, result_of(CARMAX), LATER) == [saved(CARMAX)]
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        result_of(cancelled=True),
+        result_of(error=ListingSourceError("Craigslist down")),
+        result_of(source_errors={Source.CARFAX: ListingSourceError("Carfax down")}),
+    ],
+    ids=["cancelled", "craigslist-error", "source-error"],
+)
+def test_a_cancelled_or_failed_search_marks_nothing_missing(result):
+    entries = [saved(CRAIGSLIST) if result.error else saved(CARFAX)]
+
+    assert update_from_search(entries, COVERING, result, LATER) == entries
+
+
+def test_a_failed_source_still_lets_the_other_sources_mark_their_favorites():
+    entries = [saved(CARFAX), saved(CARMAX)]
+    result = result_of(source_errors={Source.CARFAX: ListingSourceError("Carfax down")})
+
+    assert [entry.missing_since for entry in update_from_search(entries, COVERING, result, LATER)] == [None, LATER]
+
+
+@pytest.mark.parametrize(
+    "search, entry",
+    [
+        (Search("CA", "Los Angeles", "Honda", "Civic"), saved(CARMAX)),
+        (Search("CA", "Sf Bay Area", "Honda", "Accord"), saved(CRAIGSLIST)),
+        (Search("CA", "Sf Bay Area", "Honda", "Civic", (OwnerType.OWNER, OwnerType.DEALER), (Source.CARFAX,)), saved(CARMAX)),
+        (Search("CA", "Sf Bay Area", "Honda", "Civic", (OwnerType.DEALER,), tuple(SOURCES)), saved(CRAIGSLIST)),
+    ],
+    ids=["other-city", "other-model", "source-not-fetched", "owner-type-not-fetched"],
+)
+def test_a_search_not_covering_the_favorite_marks_nothing(search, entry):
+    assert update_from_search([entry], search, result_of(), LATER) == [entry]
+
+
+def test_a_favorite_saved_without_a_search_is_never_marked_missing():
+    entries = [SavedListing(CARMAX, None, SAVED)]
+
+    assert update_from_search(entries, COVERING, result_of(), LATER) == entries
+
+
+def test_a_missing_mark_and_first_saved_price_round_trip_through_json():
+    entry = SavedListing(replace(CARMAX, price=17_500), ORIGIN, SAVED, saved_price=19_998, missing_since=LATER)
+
+    assert saved_from_json(json.loads(json.dumps(saved_to_json(entry)))) == entry
+
+
+def test_an_entry_stored_before_updates_existed_loads_at_its_current_price_and_not_missing():
+    data = saved_to_json(saved(CARMAX))
+    del data["saved_price"], data["missing_since"]
+
+    entry = saved_from_json(data)
+
+    assert entry.saved_price == CARMAX.price
+    assert entry.missing_since is None
+
+
+def test_the_price_text_shows_the_change_since_saving():
+    assert price_text(12_500, 13_900) == "$12,500, was $13,900 when saved"
+    assert price_text(12_500, 12_500) == "$12,500"
+
+
+def test_a_drawer_row_shows_the_price_change_and_the_missing_mark():
+    entry = SavedListing(replace(CARMAX, price=17_500), ORIGIN, SAVED, saved_price=19_998, missing_since=LATER)
+
+    row = favorite_row(entry)
+
+    assert row.price_mileage == "$17,500, was $19,998 when saved  |  41,000 mi"
+    assert row.missing == f"Not in latest Search ({LATER.astimezone():%Y-%m-%d})"
+    assert favorite_row(saved(CARMAX)).missing is None

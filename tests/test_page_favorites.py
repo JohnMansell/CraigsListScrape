@@ -1,5 +1,6 @@
 """The Favorites drawer on the real Search page, driven by NiceGUI's simulated user."""
 import asyncio
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from nicegui import app, ui
@@ -103,3 +104,47 @@ def test_a_favorite_is_saved_kept_over_a_reload_pinned_and_removed(tmp_path, mon
     monkeypatch.setattr(page, "load_details", lambda listing: {})
 
     asyncio.run(save_open_and_remove_a_favorite(searches))
+
+
+async def later_searches_update_a_favorite(results: list[list[Listing]]) -> None:
+    async with user_simulation(root=page.search_page) as user:
+        # --- Save From The First Search
+        await user.open(LINK)
+        await user.should_see(ui.echart, retries=20)
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "CarMax", "dataIndex": 0}
+        )
+        user.find(kind=ui.button, content="☆ Save").click()
+        await user.should_see("★ Favorites (1)")
+
+        # --- A Cheaper Return Shows The Price Change
+        results.append([replace(CARMAX_CAR, price=17_500)])
+        user.find(kind=ui.button, content="Search").click()
+        await user.should_see("$17,500, was $19,998 when saved  |  41,000 mi", retries=20)
+        user.find(ui.echart).trigger(
+            "chart:mouseover", {"seriesType": "scatter", "seriesName": "CarMax", "dataIndex": 0}
+        )
+        await user.should_see("$17,500, was $19,998 when saved  |  41,000 mi")
+
+        # --- A Covering Search Without It Marks It Missing
+        results.append([OWNER_CAR])
+        user.find(kind=ui.button, content="Search").click()
+        await user.should_see("Not in latest Search", retries=20)
+        with user:
+            stored = app.storage.user[FAVORITES_KEY]
+        assert stored[0]["saved_price"] == 19_998
+        assert stored[0]["listing"]["price"] == 17_500
+        assert stored[0]["missing_since"] is not None
+
+
+def test_later_searches_update_a_favorites_price_and_mark_it_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(Storage, "path", tmp_path / "nicegui")
+    results: list[list[Listing]] = [[OWNER_CAR, CARMAX_CAR]]
+
+    def latest_search(search: Search, *args) -> SearchResult:
+        return replace(fake_search(search, *args), listings=list(results[-1]))
+
+    monkeypatch.setattr(page, "run_live_search", latest_search)
+    monkeypatch.setattr(page, "load_details", lambda listing: {})
+
+    asyncio.run(later_searches_update_a_favorite(results))

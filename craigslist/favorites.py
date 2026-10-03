@@ -4,10 +4,12 @@ A saved Listing is a snapshot of every Listing field, the Search it came from an
 was saved, so it shows in Preview even when no later Search finds it. The page keeps the
 list in `app.storage.user` under `FAVORITES_KEY`, newest first; these helpers take any
 mapping and a key, so another list of saved Listings can use them under its own key.
-Identity is `Listing.id`: the same car on two Sources is two entries.
+Identity is `Listing.id`: the same car on two Sources is two entries. A later finished
+Search updates the snapshots it returns and marks the ones it covers but misses
+(`update_from_search`); nothing ever fetches a favorite on its own.
 """
 from collections.abc import Mapping, MutableMapping, Sequence
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, fields, replace
 from datetime import datetime
 from typing import Any
 
@@ -15,7 +17,7 @@ from loguru import logger
 
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import UNKNOWN_MILEAGE
-from craigslist.search import Search
+from craigslist.search import Search, SearchResult
 from craigslist.sources import SOURCES
 
 FAVORITES_KEY = "favorites"
@@ -47,6 +49,33 @@ class SavedListing:
     """None when the Listing was saved with no Search on the page that found it."""
     saved: datetime
     """Timezone-aware."""
+    saved_price: int | None = None
+    """The price when first saved; None (an entry stored before updates existed) means the
+    snapshot's price, which `__post_init__` fills in."""
+    missing_since: datetime | None = None
+    """When a covering, complete Search last ran without returning it; None while it is found."""
+
+    def __post_init__(self) -> None:
+        if self.saved_price is None:
+            object.__setattr__(self, "saved_price", self.listing.price)
+
+    @property
+    def first_price(self) -> int:
+        """`saved_price`, typed as always present."""
+        return self.saved_price if self.saved_price is not None else self.listing.price
+
+    def covered_by(self, search: Search, result: SearchResult) -> bool:
+        """Whether a Search with no stop and no failure for this Listing's Source would have
+        returned it: same place and car as its origin, and its Source (for Craigslist, its
+        owner type) fetched."""
+        if self.search is None or result.cancelled:
+            return False
+        if not _same_search(self.search, SavedSearch.of(search)):
+            return False
+        source = self.listing.source
+        if source == Source.CRAIGSLIST:
+            return self.listing.owner_type in search.owner_types and result.error is None
+        return source in search.sources and source not in result.source_errors
 
 
 @dataclass(frozen=True)
@@ -59,6 +88,8 @@ class FavoriteRow:
     price_mileage: str
     source: str
     """Source name and saved date: "CarMax  ·  saved 2026-10-01 09:30"."""
+    missing: str | None = None
+    """"Not in latest Search (2026-10-05)", or None while the latest covering Search found it."""
 
 
 def listing_to_json(listing: Listing) -> dict[str, Any]:
@@ -88,16 +119,23 @@ def saved_to_json(entry: SavedListing) -> dict[str, Any]:
         "listing": listing_to_json(entry.listing),
         "search": asdict(entry.search) if entry.search is not None else None,
         "saved": entry.saved.isoformat(),
+        "saved_price": entry.saved_price,
+        "missing_since": entry.missing_since.isoformat() if entry.missing_since is not None else None,
     }
 
 
 def saved_from_json(data: Mapping[str, Any]) -> SavedListing:
-    """The inverse of `saved_to_json`. Raises KeyError, TypeError or ValueError when unreadable."""
+    """The inverse of `saved_to_json`. An entry stored without `saved_price` or `missing_since`
+    loads at its snapshot's price, not missing. Raises KeyError, TypeError or ValueError when
+    unreadable."""
     search = data["search"]
+    missing_since = data.get("missing_since")
     return SavedListing(
         listing_from_json(data["listing"]),
         SavedSearch(**search) if search is not None else None,
         datetime.fromisoformat(data["saved"]),
+        data.get("saved_price"),
+        datetime.fromisoformat(missing_since) if missing_since is not None else None,
     )
 
 
@@ -129,6 +167,31 @@ def remove_saved(entries: Sequence[SavedListing], listing_id: str) -> list[Saved
     return [entry for entry in entries if entry.listing.id != listing_id]
 
 
+def update_from_search(
+    entries: Sequence[SavedListing], search: Search, result: SearchResult, now: datetime
+) -> list[SavedListing]:
+    """`entries` after a finished Search, in the same order.
+
+    A favorite the Search returned takes the new snapshot, keeps its first-saved price and
+    loses any missing mark. One it covers but did not return (`SavedListing.covered_by`) is
+    marked missing at `now`; any other is unchanged.
+    """
+    returned = {listing.id: listing for listing in result.listings}
+    updated = []
+    for entry in entries:
+        found = returned.get(entry.listing.id)
+        if found is not None:
+            entry = replace(entry, listing=found, missing_since=None)
+        elif entry.covered_by(search, result):
+            entry = replace(entry, missing_since=now)
+        updated.append(entry)
+    return updated
+
+
+def _same_search(a: SavedSearch, b: SavedSearch) -> bool:
+    return all(x.casefold() == y.casefold() for x, y in zip(asdict(a).values(), asdict(b).values(), strict=True))
+
+
 def saved_ids(entries: Sequence[SavedListing]) -> frozenset[str]:
     return frozenset(entry.listing.id for entry in entries)
 
@@ -145,13 +208,22 @@ def source_name(listing: Listing) -> str:
     return SOURCES[listing.source].name
 
 
+def price_text(price: int, saved_price: int) -> str:
+    """"$12,500, was $13,900 when saved", or just "$12,500" when the price has not changed."""
+    if price == saved_price:
+        return f"${price:,}"
+    return f"${price:,}, was ${saved_price:,} when saved"
+
+
 def favorite_row(entry: SavedListing) -> FavoriteRow:
-    """A drawer row. The saved date is in the server's local time."""
+    """A drawer row. The saved and missing dates are in the server's local time."""
     listing = entry.listing
     mileage = f"{listing.mileage:,} mi" if listing.mileage is not None else UNKNOWN_MILEAGE
+    missing = entry.missing_since
     return FavoriteRow(
         image=listing.images[0] if listing.images else None,
         title=listing.title,
-        price_mileage=f"${listing.price:,}  |  {mileage}",
+        price_mileage=f"{price_text(listing.price, entry.first_price)}  |  {mileage}",
         source=f"{source_name(listing)}  ·  saved {entry.saved.astimezone():%Y-%m-%d %H:%M}",
+        missing=f"Not in latest Search ({missing.astimezone():%Y-%m-%d})" if missing is not None else None,
     )

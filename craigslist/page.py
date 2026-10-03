@@ -37,9 +37,11 @@ from craigslist.favorites import (
     add_saved,
     button_text,
     favorite_row,
+    price_text,
     read_saved,
     remove_saved,
     saved_ids,
+    update_from_search,
     write_saved,
 )
 from craigslist.filters import Filters, trim_options, year_bounds, year_options
@@ -378,14 +380,16 @@ def search_page(request: Request) -> None:
         if content.image:
             ui.image(content.image).classes("w-full rounded")
         ui.label(content.title).classes("font-bold")
-        ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
+        entry = next((entry for entry in favorites() if entry.listing.id == listing.id), None)
+        price = price_text(listing.price, entry.first_price) if entry is not None else content.price
+        ui.label(f"{price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
         for line in (content.year, content.trim, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
         with ui.row().classes("items-center gap-1"):
             ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
-            saved = listing.id in saved_ids(favorites())
+            saved = entry is not None
             ui.button(save_label(saved), on_click=lambda: favorite_toggled(listing)).props(
                 "unelevated color=amber-8" if saved else "outline color=amber-8"
             )
@@ -482,6 +486,14 @@ def search_page(request: Request) -> None:
         draw_preview()
         redraw_pin()
 
+    def update_favorites(search: Search, result: SearchResult) -> None:
+        """Refresh the favorites a finished Search returned and mark the ones it covered but missed."""
+        entries = favorites()
+        updated = update_from_search(entries, search, result, datetime.now(UTC))
+        if updated != entries:
+            write_saved(app.storage.user, FAVORITES_KEY, updated)
+            draw_favorites()
+
     async def favorite_clicked(entry: SavedListing) -> None:
         """Pin a favorite, as the current results' Listing when this Search found it too."""
         await pin(shown_listing(entry.listing.id) or entry.listing)
@@ -505,6 +517,8 @@ def search_page(request: Request) -> None:
                             ui.label(row.title).classes("text-sm font-bold truncate w-full")
                             ui.label(row.price_mileage).classes("text-sm")
                             ui.label(row.source).classes("text-xs opacity-70")
+                            if row.missing:
+                                ui.label(row.missing).classes("text-xs text-amber-800 dark:text-amber-300")
                     item.mark("favorite").on("click", lambda _, entry=entry: favorite_clicked(entry))
                     ui.button("✕", on_click=lambda _, listing=entry.listing: favorite_toggled(listing)).props("flat dense size=sm")
 
@@ -555,6 +569,7 @@ def search_page(request: Request) -> None:
         if result is None:  # the app is shutting down
             return
         current = (search, result)
+        update_favorites(search, result)
         fill_filter_options(result.listings)
         show(search, result, final=True)
 
