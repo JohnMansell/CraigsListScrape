@@ -10,6 +10,7 @@ import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 from loguru import logger
@@ -40,6 +41,9 @@ from craigslist.preview import (
 )
 from craigslist.search import Search, SearchError, SearchResult, run_live_search
 from craigslist.sources import SOURCES, choices_text
+
+if TYPE_CHECKING:
+    from craigslist.prototype_favorites import FavoritesPrototype  # PROTOTYPE
 
 HOST = "127.0.0.1"
 """Local only until the Linode ticket adds a --host flag."""
@@ -178,7 +182,7 @@ def _known(value: str | None, options: list[str]) -> str | None:
     return next((option for option in options if option.casefold() == value.strip().casefold()), None)
 
 
-def search_page(request: Request) -> None:
+def search_page(request: Request, prototype: "FavoritesPrototype | None" = None) -> None:
     """Build one Search page for one browser tab.
 
     A URL naming a Search fills the controls, and runs it once complete. Otherwise the
@@ -346,6 +350,8 @@ def search_page(request: Request) -> None:
             if line:
                 ui.label(line).classes("text-sm opacity-70")
         ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
+        if prototype is not None:
+            prototype.favorite_button(listing)
         if listing is pinned and listing.source == Source.CRAIGSLIST:
             lines = detail_lines(pinned_details)
             if isinstance(lines, str):
@@ -410,6 +416,8 @@ def search_page(request: Request) -> None:
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
             chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
+            if prototype is not None:
+                prototype.mark_chart(chart.options, shown_result.listings)
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -494,6 +502,8 @@ def search_page(request: Request) -> None:
         elif result.listings:
             chart.options.clear()
             chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only))
+            if prototype is not None:
+                prototype.mark_chart(chart.options, result.listings)
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
@@ -515,7 +525,7 @@ def search_page(request: Request) -> None:
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
-        with ui.row().classes("w-full items-center gap-3"):
+        with ui.row().classes("w-full items-center gap-3") as toolbar:
             ui.select(lookup.states(), value=form.state, label="State", with_input=True, on_change=lambda e: state_changed(e.value)).classes("w-24")
             city_select = ui.select(form.city_options(), value=form.city, label="City", with_input=True, on_change=lambda e: city_changed(e.value)).classes("w-56")
             ui.select(lookup.makes(), value=form.make, label="Make", with_input=True, on_change=lambda e: make_changed(e.value)).classes("w-44")
@@ -541,7 +551,7 @@ def search_page(request: Request) -> None:
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):
-            with ui.column().classes("grow h-full items-center justify-center"):
+            with ui.column().classes("grow h-full items-center justify-center") as chart_column:
                 chart = ui.echart({}, on_point_click=point_clicked).classes("w-full h-full")
                 chart.set_visibility(False)
                 with ui.row().classes("items-center gap-3"):
@@ -558,6 +568,8 @@ def search_page(request: Request) -> None:
         status = ui.label("Choose a car and press Search.").classes("text-sm opacity-70")
     chart.on("chart:mouseover", point_hovered, ["seriesType", "seriesName", "dataIndex"])
     chart.on("chart:globalout", hover_ended, [])
+    if prototype is not None:
+        prototype.mount(toolbar, chart_column, pin, lambda: (redraw_pin(), draw_preview()), lambda: shown_search)
     draw_preview()
     timer = ui.timer(POLL_SECONDS, draw_arrivals, active=False)
     refresh_search_button()
