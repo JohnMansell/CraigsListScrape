@@ -9,7 +9,7 @@ One question put to Craigslist: a state, a city, a make, a model, and which Owne
 _Avoid_: Query, scrape
 
 **Listing**:
-One car for sale, with its price, mileage, photos, Owner type, and Source.
+One car for sale, with its price, mileage, model year, photos, Owner type, and Source. Craigslist has no year field, so a Craigslist Listing's year is read from its title, and is unknown when the title has none.
 _Avoid_: Car, post, posting, result
 
 **Owner type**:
@@ -31,6 +31,10 @@ The fitted line of price against mileage for one Owner type from one Source in a
 _Avoid_: Trend line, fit, regression
 
 ## The page
+
+**Display filter**:
+A rule, such as "one owner", that fades the Listings failing it to light-grey dots on the chart. It never removes a Listing from a Price curve, so filtering never makes a curve less accurate.
+_Avoid_: Search filter, query filter
 
 **Search page**:
 The one page where a person runs a Search and reads the chart of its Listings.

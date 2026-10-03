@@ -28,6 +28,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
+from craigslist.filters import Filters, trim_options, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
@@ -48,9 +49,13 @@ POLL_SECONDS = 0.25
 TITLE = "Craigslist car prices"
 STORAGE_DIR = Path(".nicegui")
 """NiceGUI's per-browser storage files, and the generated secret that signs the browser cookie."""
+FLAG_FILTERS = (("one_owner", "One owner"), ("no_accidents", "No accidents"), ("price_dropped", "Price dropped"))
+"""Each yes/no display filter: its `Filters` field and its switch's label."""
 SEARCH_KEYS = ("state", "city", "make", "model")
 FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
+DEFAULT_SEARCH = {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
+"""What a browser with no link and no remembered Search starts from, so Search is one click."""
 
 
 @dataclass
@@ -145,6 +150,14 @@ def has_search_params(params: Mapping[str, str]) -> bool:
     return any(key in params for key in (*SEARCH_KEYS, *FLAG_KEYS))
 
 
+def starting_query(params: Mapping[str, str], remembered: Mapping[str, str]) -> Mapping[str, str]:
+    """Where the form starts: a link naming a Search, else what this browser last held,
+    else DEFAULT_SEARCH."""
+    if has_search_params(params):
+        return params
+    return remembered or DEFAULT_SEARCH
+
+
 def storage_secret(directory: Path = STORAGE_DIR) -> str:
     """The secret that signs the browser cookie, made on first use and kept out of the repo."""
     path = directory / "storage_secret"
@@ -174,7 +187,7 @@ def search_page(request: Request) -> None:
     params: Mapping[str, str] = request.query_params
     from_link = has_search_params(params)
     remembered: Mapping[str, str] = app.storage.user.get("search", {})
-    form = SearchForm.from_query(params if from_link else remembered)
+    form = SearchForm.from_query(starting_query(params, remembered))
     current: tuple[Search, SearchResult] | None = None
     """The last finished Search and its result. Its owner types are the ones fetched."""
     running = False
@@ -193,6 +206,10 @@ def search_page(request: Request) -> None:
     """None while the Pinned Listing's details load."""
     list_mode = False
     """The panel lists the Listings with no mileage, until one is pinned."""
+    filters = Filters()
+    """The display filters: they fade points, never refit a curve or refetch."""
+    curve_only: frozenset[Source] = frozenset()
+    """Sources drawn as their Price curve alone, points hidden."""
 
     def refresh_search_button() -> None:
         problem = form.problem()
@@ -248,6 +265,44 @@ def search_page(request: Request) -> None:
         refresh_search_button()
         redraw()
 
+    def set_filters(new: Filters) -> None:
+        nonlocal filters
+        if new != filters:
+            filters = new
+            redraw()
+
+    def flag_changed(name: str, **changes: bool) -> None:
+        set_filters(replace(filters, **{name: replace(getattr(filters, name), **changes)}))
+
+    def years_changed() -> None:
+        low, high = year_bounds(min_year_select.value, max_year_select.value, list(min_year_select.options))
+        set_filters(replace(filters, min_year=low, max_year=high))
+
+    def curve_only_changed(source: Source, on: bool) -> None:
+        nonlocal curve_only
+        curve_only = curve_only | {source} if on else curve_only - {source}
+        redraw()
+
+    def trim_toggled(trim: str | None, selected: bool) -> None:
+        hidden = filters.hidden_trims - {trim} if selected else filters.hidden_trims | {trim}
+        set_filters(replace(filters, hidden_trims=hidden))
+
+    def fill_filter_options(listings: list[Listing]) -> None:
+        """Offer the years and trims in a finished Search's results, all of them chosen."""
+        nonlocal filters
+        years = year_options(listings)
+        filters = replace(filters, min_year=None, max_year=None, hidden_trims=frozenset())
+        min_year_select.set_options(years, value=years[0] if years else None)
+        max_year_select.set_options(years, value=years[-1] if years else None)
+        trim_row.clear()
+        with trim_row:
+            ui.label("Trim").classes("text-sm opacity-70")
+            for trim in (*trim_options(listings), None):
+                ui.chip(
+                    trim or "Unknown", selectable=True, selected=True,
+                    on_selection_change=lambda e, trim=trim: trim_toggled(trim, e.value),
+                ).props("dense outline")
+
     def redraw() -> None:
         """Apply the checkboxes to the finished Search at once, without fetching."""
         if current is not None and not running:
@@ -287,7 +342,7 @@ def search_page(request: Request) -> None:
         ui.label(content.title).classes("font-bold")
         ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
-        for line in (content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
+        for line in (content.year, content.trim, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
         ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
@@ -309,7 +364,7 @@ def search_page(request: Request) -> None:
         """The Listing behind a chart event on a point, or None for a curve, ring, or stale point."""
         if shown_search is None or shown_result is None or args.get("seriesType") != "scatter":
             return None
-        rows = plotted_listings(shown_search, shown_result).get(str(args.get("seriesName")))
+        rows = plotted_listings(shown_search, shown_result, filters, curve_only).get(str(args.get("seriesName")))
         index = args.get("dataIndex")
         if rows is None or not isinstance(index, int) or not 0 <= index < len(rows):
             return None
@@ -354,7 +409,7 @@ def search_page(request: Request) -> None:
         """Move the ring to the Pinned Listing without redrawing the points."""
         if shown_search is not None and shown_result is not None and chart.visible:
             chart.options.clear()
-            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None))
+            chart.options.update(chart_options(shown_search, shown_result, pinned.id if pinned else None, filters, curve_only))
             chart.update()
 
     def no_mileage_clicked() -> None:
@@ -404,6 +459,7 @@ def search_page(request: Request) -> None:
         if result is None:  # the app is shutting down
             return
         current = (search, result)
+        fill_filter_options(result.listings)
         show(search, result, final=True)
 
     def arm_drag_zoom() -> None:
@@ -437,7 +493,7 @@ def search_page(request: Request) -> None:
             empty_label.set_text(message)
         elif result.listings:
             chart.options.clear()
-            chart.options.update(chart_options(search, result, pinned.id if pinned else None))
+            chart.options.update(chart_options(search, result, pinned.id if pinned else None, filters, curve_only))
             chart.update()
             arm_drag_zoom()
         reset_button.set_visibility(chart.visible)
@@ -455,7 +511,7 @@ def search_page(request: Request) -> None:
         banner.set_visibility(text is not None)
         banner.set_text(text or "")
         if search.owner_types or search.sources:
-            status.set_text(status_text(search, result) if final else progress_text(len(result.listings)))
+            status.set_text(status_text(search, result, filters, curve_only) if final else progress_text(len(result.listings)))
 
     # NiceGUI pads the page by 1rem on each side, so fill the rest of the window.
     with ui.column().classes("w-full h-[calc(100vh-2rem)] gap-2 no-wrap"):
@@ -467,9 +523,21 @@ def search_page(request: Request) -> None:
             ui.checkbox("Owner", value=form.owner, on_change=lambda e: owner_changed(e.value))
             ui.checkbox("Dealer", value=form.dealer, on_change=lambda e: dealer_changed(e.value))
             for source, info in SOURCES.items():
-                ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
+                with ui.row().classes("items-center gap-0 no-wrap"):
+                    ui.checkbox(info.name, value=form.sources[source], on_change=lambda e, source=source: source_changed(source, e.value))
+                    ui.switch("curve only", on_change=lambda e, source=source: curve_only_changed(source, e.value)).props("dense size=xs").classes("text-xs opacity-70")
             search_button = ui.button("Search", on_click=search_clicked)
             hint = ui.label().classes("text-sm opacity-70")
+        with ui.row().classes("w-full items-center gap-4"):
+            for name, label in FLAG_FILTERS:
+                with ui.row().classes("items-center gap-0 no-wrap"):
+                    ui.switch(label, on_change=lambda e, name=name: flag_changed(name, on=e.value))
+                    ui.checkbox("include unknown", value=True, on_change=lambda e, name=name: flag_changed(name, include_unknown=e.value)).props("dense size=xs").classes("text-xs opacity-70")
+            with ui.row().classes("items-center gap-1 no-wrap"):
+                min_year_select = ui.select([], label="Min year", on_change=years_changed).props("dense").classes("w-24")
+                max_year_select = ui.select([], label="Max year", on_change=years_changed).props("dense").classes("w-24")
+                ui.checkbox("include unknown year", value=True, on_change=lambda e: set_filters(replace(filters, include_unknown_year=e.value))).props("dense size=xs").classes("text-xs opacity-70")
+        trim_row = ui.row().classes("w-full items-center gap-1")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):

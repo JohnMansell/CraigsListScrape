@@ -215,8 +215,10 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         return None
 
     trim = item.get("trim")
+    if not (isinstance(trim, str) and trim and trim != "Unspecified"):
+        trim = None
     title = f"{year} {make} {model}"
-    if isinstance(trim, str) and trim and trim != "Unspecified":
+    if trim:
         title += f" {trim}"
 
     mileage = item.get("mileage")
@@ -243,6 +245,8 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         one_owner=one_owner if isinstance(one_owner, bool) else None,
         no_accidents=no_accidents if isinstance(no_accidents, bool) else None,
         price_dropped=_price_dropped(item.get("priceHistory")),
+        year=year,
+        trim=trim,
     )
 
 

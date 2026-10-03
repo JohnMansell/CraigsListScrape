@@ -16,6 +16,7 @@ from craigslist.listings import (
     Search,
     Source,
     listing_attributes,
+    model_year,
     parse_batch,
     parse_full,
     search_listings,
@@ -104,6 +105,7 @@ def test_parses_a_full_response_into_listings():
         owner_type=OwnerType.OWNER,
         posted=datetime(2026, 9, 18, 19, 2, 16, tzinfo=UTC),
         location="Laguna Niguel",
+        year=2015,
     )
     assert page.listings[0].images[0] == "https://images.craigslist.org/00h0h_4R4y4ghJzOC_0CI0t2_600x450.jpg"
 
@@ -120,6 +122,7 @@ def test_parses_a_batch_response_into_listings():
     assert corvette.url == "https://www.craigslist.org/view/d/westminster-2004-chevy-corvette/f6vnEnsiPRzJzzY9C6CtsJ"
     assert corvette.images[0] == "https://images.craigslist.org/01414_4krbn3IWsj9_0wU0oG_600x450.jpg"
     assert corvette.owner_type == OwnerType.OWNER
+    assert corvette.year == 2004
 
 
 def test_full_result_with_extra_integer_after_the_image_suffix_is_read():
@@ -537,3 +540,31 @@ def test_paged_search_fills_batch_results_from_the_step_2_short_form(small_pages
     # A batch result the short form does not list stays unknown rather than failing.
     assert by_id[7968471033].posted is None
     assert by_id[7968471033].location is None
+
+
+# Model year from the title
+
+
+@pytest.mark.parametrize(
+    "title, year",
+    [
+        ("2015 Honda Civic EX", 2015),
+        ("1967 Ford Mustang fastback", 1967),
+        ("Honda Civic 2017 one owner", 2017),
+        ("Clean title Civic EX, 2009, runs great", 2009),
+        ("Honda Civic EX", None),
+        ("Civic EX $8500 obo", None),
+        ("Civic 1000 miles on new engine", None),
+        ("Civic 3000", None),
+        ("Civic 20155 parts", None),
+        ("Civic $2015", None),
+    ],
+)
+def test_model_year_is_read_from_the_title(title, year):
+    assert model_year(title) == year
+
+
+def test_a_title_with_no_year_is_logged_at_debug(log_messages):
+    model_year("Honda Civic EX")
+
+    assert any("no model year" in message for message in log_messages)

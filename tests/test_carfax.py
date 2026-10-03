@@ -83,6 +83,16 @@ def test_a_listing_carries_title_price_mileage_url_and_image():
     assert listing.one_owner == item["oneOwner"]
     assert listing.no_accidents == item["noAccidents"]
     assert listing.price_dropped is True  # the fixture's price history has a drop
+    assert listing.year == item["year"]
+    assert listing.trim == item["trim"]
+
+
+def test_an_unspecified_trim_is_unknown():
+    item = dict(fixture("carfax_page_1.json")["listings"][1], trim="Unspecified")
+
+    listing = carfax._parse_item(item)
+
+    assert listing is not None and listing.trim is None
 
 
 def test_a_listing_with_no_price_drop_in_its_history_gets_false():

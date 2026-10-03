@@ -1,7 +1,7 @@
 import pytest
 
 from craigslist.listings import OwnerType, Source
-from craigslist.page import SearchForm, has_search_params, storage_secret
+from craigslist.page import DEFAULT_SEARCH, SearchForm, has_search_params, starting_query, storage_secret
 from craigslist.search import Search
 
 
@@ -185,3 +185,17 @@ def test_the_storage_secret_is_made_once_and_reused(tmp_path):
     assert len(first) == 64
     assert storage_secret(directory) == first
     assert (directory / "storage_secret").stat().st_mode & 0o077 == 0
+
+
+def test_a_first_visit_starts_from_the_default_search_ready_to_run():
+    query = starting_query({}, {})
+
+    assert query == DEFAULT_SEARCH
+    assert SearchForm.from_query(query).problem() is None
+
+
+def test_a_link_or_the_browsers_memory_wins_over_the_default_search():
+    remembered = {"state": "TX", "city": "Abilene"}
+
+    assert starting_query({"make": "Acura"}, remembered) == {"make": "Acura"}
+    assert starting_query({"utm": "x"}, remembered) == remembered
