@@ -243,6 +243,7 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         one_owner=one_owner if isinstance(one_owner, bool) else None,
         no_accidents=no_accidents if isinstance(no_accidents, bool) else None,
         price_dropped=_price_dropped(item.get("priceHistory")),
+        year=year,
     )
 
 

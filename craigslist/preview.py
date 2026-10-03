@@ -37,6 +37,8 @@ class PreviewContent:
     """"No accidents reported" or "Accident reported". Carfax only; None otherwise."""
     price_drop: str | None
     """A note when Carfax's price history or CarMax's `hasPriceDrop` shows a drop. None otherwise."""
+    year: str | None = None
+    """"Model year 2015", or None when the year is unknown."""
 
 
 def preview_content(listing: Listing) -> PreviewContent:
@@ -55,6 +57,7 @@ def preview_content(listing: Listing) -> PreviewContent:
         owners=_owners_text(listing.one_owner),
         accidents=_accidents_text(listing.no_accidents),
         price_drop="Price dropped" if listing.price_dropped else None,
+        year=f"Model year {listing.year}" if listing.year is not None else None,
     )
 
 

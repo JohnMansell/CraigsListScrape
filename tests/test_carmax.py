@@ -79,6 +79,7 @@ def test_a_listing_carries_the_preview_fields():
     assert listing.price_dropped is False
     assert listing.one_owner is True  # highlights has singleOwner
     assert listing.no_accidents is None
+    assert listing.year == item["year"]
 
 
 def test_one_owner_is_none_never_false_without_single_owner():

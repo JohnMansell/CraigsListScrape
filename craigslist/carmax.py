@@ -213,6 +213,7 @@ def _parse_item(item: dict[str, Any]) -> Listing | None:
         one_owner=True if isinstance(highlights, list) and "singleOwner" in highlights else None,
         no_accidents=None,
         price_dropped=price_drop if isinstance(price_drop, bool) else None,
+        year=year,
     )
 
 

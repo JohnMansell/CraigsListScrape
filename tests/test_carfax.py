@@ -83,6 +83,7 @@ def test_a_listing_carries_title_price_mileage_url_and_image():
     assert listing.one_owner == item["oneOwner"]
     assert listing.no_accidents == item["noAccidents"]
     assert listing.price_dropped is True  # the fixture's price history has a drop
+    assert listing.year == item["year"]
 
 
 def test_a_listing_with_no_price_drop_in_its_history_gets_false():

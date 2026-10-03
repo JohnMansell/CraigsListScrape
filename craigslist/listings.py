@@ -48,6 +48,9 @@ TAG_ODOMETER = 9
 TAG_PRICE = 10
 TAG_TOKEN = 13
 
+OLDEST_YEAR = 1900
+"""The earliest four-digit number in a title read as a model year."""
+
 Fetch = Callable[[str], str]
 """Returns the response body for a URL, or raises. Owns pacing and headers."""
 
@@ -109,6 +112,8 @@ class Listing:
     """Carfax's `noAccidents`. None for Craigslist and CarMax."""
     price_dropped: bool | None = None
     """Carfax's price history has a drop; CarMax's `hasPriceDrop`. None for Craigslist."""
+    year: int | None = None
+    """The model year. Carfax and CarMax from the API; Craigslist from the title. None when unknown."""
 
 
 @dataclass(frozen=True)
@@ -388,7 +393,22 @@ def _parse_result(
         url=listing_url(slug, token),
         images=tuple(_image_url(code) for code in dict.fromkeys(codes)),
         owner_type=owner_type,
+        year=model_year(title),
     )
+
+
+def model_year(title: str) -> int | None:
+    """The first plausible model year in a title, such as 2015 in "2015 Honda Civic EX".
+
+    Only a standalone four-digit number from OLDEST_YEAR to next year counts, so prices
+    ("$8500", "$2015") and other numbers ("1000 miles") are not read as one.
+    """
+    latest = datetime.now(UTC).year + 1
+    for match in re.finditer(r"(?<![\d$.,])\d{4}(?!,?\d)", title):
+        if OLDEST_YEAR <= int(match[0]) <= latest:
+            return int(match[0])
+    logger.debug("{}: no model year in title {!r}", API_NAME, title)
+    return None
 
 
 def _posted_and_location(item: list[Any], decode: dict[str, Any]) -> tuple[datetime | None, str | None]:

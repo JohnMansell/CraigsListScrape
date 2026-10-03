@@ -287,7 +287,7 @@ def search_page(request: Request) -> None:
         ui.label(content.title).classes("font-bold")
         ui.label(f"{content.price}  |  {content.mileage}").classes("text-lg")
         ui.label(content.owner)
-        for line in (content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
+        for line in (content.year, content.posted, content.location, content.dealer, content.owners, content.accidents, content.price_drop):
             if line:
                 ui.label(line).classes("text-sm opacity-70")
         ui.button(content.link_label).props(f'href="{content.url}" target="_blank" rel="noopener" flat')
