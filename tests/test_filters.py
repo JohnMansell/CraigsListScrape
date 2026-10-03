@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from craigslist.filters import Filters, Flag, match_counts
+from craigslist.filters import Filters, Flag, match_counts, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 
 CAR = Listing("carfax:1", Source.CARFAX, "car", 10_000, 50_000, "https://example.org/1", (), OwnerType.DEALER)
@@ -61,3 +61,47 @@ def test_match_counts_split_listings_into_matched_and_faded():
     assert match_counts(listings, Filters(one_owner=Flag(on=True))) == (2, 1)
     assert match_counts(listings, Filters(one_owner=Flag(on=True, include_unknown=False))) == (1, 2)
     assert match_counts(listings, Filters()) == (3, 0)
+
+
+# Year range
+
+
+@pytest.mark.parametrize(
+    "year, passes",
+    [(2017, False), (2018, True), (2019, True), (2020, True), (2021, False), (None, True)],
+)
+def test_a_year_range_passes_years_inside_it_inclusive(year, passes):
+    filters = Filters(min_year=2018, max_year=2020)
+
+    assert filters.passes(replace(CAR, year=year)) is passes
+    assert filters.active()
+
+
+def test_an_open_ended_year_range_bounds_one_side_only():
+    assert Filters(min_year=2018).passes(replace(CAR, year=2030))
+    assert not Filters(min_year=2018).passes(replace(CAR, year=2010))
+    assert Filters(max_year=2018).passes(replace(CAR, year=1990))
+
+
+def test_unknown_years_fail_once_include_unknown_year_is_unticked():
+    assert not Filters(min_year=2018, include_unknown_year=False).passes(replace(CAR, year=None))
+    assert not Filters(include_unknown_year=False).passes(replace(CAR, year=None))
+    assert Filters(include_unknown_year=False).passes(replace(CAR, year=2001))
+    assert Filters(include_unknown_year=False).active()
+
+
+def test_year_options_are_the_distinct_known_years_in_order():
+    listings = [replace(CAR, year=year) for year in (2019, None, 2015, 2019, 2021)]
+
+    assert year_options(listings) == [2015, 2019, 2021]
+    assert year_options([]) == []
+
+
+def test_a_chosen_year_at_either_end_of_the_options_leaves_that_side_open():
+    options = [2015, 2018, 2021]
+
+    assert year_bounds(2015, 2021, options) == (None, None)
+    assert year_bounds(2018, 2021, options) == (2018, None)
+    assert year_bounds(2015, 2018, options) == (None, 2018)
+    assert year_bounds(None, None, options) == (None, None)
+    assert year_bounds(None, None, []) == (None, None)

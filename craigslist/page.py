@@ -28,7 +28,7 @@ from craigslist.chart import (
     status_text,
     unfetched_message,
 )
-from craigslist.filters import Filters
+from craigslist.filters import Filters, year_bounds, year_options
 from craigslist.listings import Listing, OwnerType, Source
 from craigslist.preview import (
     IDLE_TEXT,
@@ -253,10 +253,26 @@ def search_page(request: Request) -> None:
         refresh_search_button()
         redraw()
 
-    def flag_changed(name: str, **changes: bool) -> None:
+    def set_filters(new: Filters) -> None:
         nonlocal filters
-        filters = replace(filters, **{name: replace(getattr(filters, name), **changes)})
-        redraw()
+        if new != filters:
+            filters = new
+            redraw()
+
+    def flag_changed(name: str, **changes: bool) -> None:
+        set_filters(replace(filters, **{name: replace(getattr(filters, name), **changes)}))
+
+    def years_changed() -> None:
+        low, high = year_bounds(min_year_select.value, max_year_select.value, list(min_year_select.options))
+        set_filters(replace(filters, min_year=low, max_year=high))
+
+    def fill_filter_options(listings: list[Listing]) -> None:
+        """Offer the years in a finished Search's results, the full range chosen."""
+        nonlocal filters
+        years = year_options(listings)
+        filters = replace(filters, min_year=None, max_year=None)
+        min_year_select.set_options(years, value=years[0] if years else None)
+        max_year_select.set_options(years, value=years[-1] if years else None)
 
     def redraw() -> None:
         """Apply the checkboxes to the finished Search at once, without fetching."""
@@ -414,6 +430,7 @@ def search_page(request: Request) -> None:
         if result is None:  # the app is shutting down
             return
         current = (search, result)
+        fill_filter_options(result.listings)
         show(search, result, final=True)
 
     def arm_drag_zoom() -> None:
@@ -485,6 +502,10 @@ def search_page(request: Request) -> None:
                 with ui.row().classes("items-center gap-0 no-wrap"):
                     ui.switch(label, on_change=lambda e, name=name: flag_changed(name, on=e.value))
                     ui.checkbox("include unknown", value=True, on_change=lambda e, name=name: flag_changed(name, include_unknown=e.value)).props("dense size=xs").classes("text-xs opacity-70")
+            with ui.row().classes("items-center gap-1 no-wrap"):
+                min_year_select = ui.select([], label="Min year", on_change=years_changed).props("dense").classes("w-24")
+                max_year_select = ui.select([], label="Max year", on_change=years_changed).props("dense").classes("w-24")
+                ui.checkbox("include unknown year", value=True, on_change=lambda e: set_filters(replace(filters, include_unknown_year=e.value))).props("dense size=xs").classes("text-xs opacity-70")
         banner = ui.label().classes("w-full p-2 rounded bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100")
         banner.set_visibility(False)
         with ui.row().classes("w-full grow gap-4 no-wrap"):

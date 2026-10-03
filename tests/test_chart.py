@@ -544,3 +544,19 @@ def test_the_status_line_counts_matching_and_faded_listings_only_while_filtering
         "4 listings: 2 owner, 0 dealer, 2 Carfax. 2 match filters, 2 faded"
     )
     assert status_text(CARFAX_SEARCH_WITH_OWNERS, result) == "4 listings: 2 owner, 0 dealer, 2 Carfax"
+
+
+def test_a_year_range_fades_other_years_and_leaves_curves_and_axes_alone():
+    result = filtered_result()
+    result = replace(result, listings=[replace(item, year=2015 + index) for index, item in enumerate(result.listings)])
+    years = Filters(min_year=2016, max_year=2017)
+
+    plain = chart_options(CARFAX_SEARCH_WITH_OWNERS, result)
+    filtered = chart_options(CARFAX_SEARCH_WITH_OWNERS, result, filters=years)
+
+    for name in ("Owner curve", f"{CARFAX.name} curve"):
+        assert series_named(plain, name) == series_named(filtered, name)
+    assert plain["xAxis"] == filtered["xAxis"] and plain["yAxis"] == filtered["yAxis"]
+    faded = [point for name in ("Owner", CARFAX.name) for point in series_named(filtered, name)["data"] if isinstance(point, dict)]
+    assert len(faded) == 2
+    assert status_text(CARFAX_SEARCH_WITH_OWNERS, result, years).endswith("2 match filters, 2 faded")
