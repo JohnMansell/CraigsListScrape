@@ -54,6 +54,8 @@ FLAG_FILTERS = (("one_owner", "One owner"), ("no_accidents", "No accidents"), ("
 SEARCH_KEYS = ("state", "city", "make", "model")
 FLAG_KEYS = ("owner", "dealer", *(info.query_key for info in SOURCES.values()))
 FALSE_WORDS = {"0", "false", "no", "off"}
+DEFAULT_SEARCH = {"state": "CA", "city": "Sf Bay Area", "make": "Honda", "model": "Civic"}
+"""What a browser with no link and no remembered Search starts from, so Search is one click."""
 
 
 @dataclass
@@ -148,6 +150,14 @@ def has_search_params(params: Mapping[str, str]) -> bool:
     return any(key in params for key in (*SEARCH_KEYS, *FLAG_KEYS))
 
 
+def starting_query(params: Mapping[str, str], remembered: Mapping[str, str]) -> Mapping[str, str]:
+    """Where the form starts: a link naming a Search, else what this browser last held,
+    else DEFAULT_SEARCH."""
+    if has_search_params(params):
+        return params
+    return remembered or DEFAULT_SEARCH
+
+
 def storage_secret(directory: Path = STORAGE_DIR) -> str:
     """The secret that signs the browser cookie, made on first use and kept out of the repo."""
     path = directory / "storage_secret"
@@ -177,7 +187,7 @@ def search_page(request: Request) -> None:
     params: Mapping[str, str] = request.query_params
     from_link = has_search_params(params)
     remembered: Mapping[str, str] = app.storage.user.get("search", {})
-    form = SearchForm.from_query(params if from_link else remembered)
+    form = SearchForm.from_query(starting_query(params, remembered))
     current: tuple[Search, SearchResult] | None = None
     """The last finished Search and its result. Its owner types are the ones fetched."""
     running = False
